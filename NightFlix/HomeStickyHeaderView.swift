@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct HomeStickyHeaderView: View {
-    static let expandedContentHeight: CGFloat = 92
+    static let contentHeight: CGFloat = 84
     static let scrollContentSpacing: CGFloat = 14
 
     let scrollOffset: CGFloat
@@ -37,7 +37,7 @@ struct HomeStickyHeaderView: View {
                 )
             }
             .padding(.horizontal, 20)
-            .frame(height: headerContentHeight, alignment: .center)
+            .frame(height: Self.contentHeight, alignment: .center)
 
             Rectangle()
                 .fill(Color.white.opacity(0.08 * backgroundProgress))
@@ -51,7 +51,7 @@ struct HomeStickyHeaderView: View {
     }
 
     static func scrollContentTopPadding(topSafeArea: CGFloat) -> CGFloat {
-        max(topSafeArea, 0) + expandedContentHeight + scrollContentSpacing
+        max(topSafeArea, 0) + contentHeight + scrollContentSpacing
     }
 
     private var title: some View {
@@ -94,32 +94,20 @@ struct HomeStickyHeaderView: View {
         .ignoresSafeArea(edges: .top)
     }
 
-    private var headerProgress: CGFloat {
-        let rawProgress = min(max(scrollOffset / 92, 0), 1)
-
-        guard animationsEnabled, !reduceMotion else {
-            return scrollOffset > 18 ? 1 : 0
-        }
-
-        return rawProgress
-    }
-
     private var backgroundProgress: CGFloat {
         guard animationsEnabled, !reduceMotion else {
             return scrollOffset > 18 ? 1 : 0
         }
 
-        return min(max((scrollOffset - 12) / 52, 0), 1)
+        return min(max((scrollOffset - 12) / 88, 0), 1)
     }
 
     private var headerContentHeight: CGFloat {
-        compactContentHeight + (Self.expandedContentHeight - compactContentHeight) * (1 - headerProgress)
+        Self.contentHeight
     }
 
     private var titleSize: CGFloat {
-        let expandedSize: CGFloat = reduceMotion ? 42 : 50
-        let compactSize: CGFloat = 32
-        return compactSize + (expandedSize - compactSize) * (1 - headerProgress)
+        38
     }
 
     private var menuForegroundColor: Color {
@@ -131,19 +119,15 @@ struct HomeStickyHeaderView: View {
     }
 
     private var titleGlowOpacity: CGFloat {
-        colorScheme == .dark ? 1 - (headerProgress * 0.22) : 1
+        colorScheme == .dark ? 1 - (backgroundProgress * 0.16) : 1
     }
 
     private var titleGlowRadius: CGFloat {
-        16 - (headerProgress * 6)
+        16 - (backgroundProgress * 4)
     }
 
     private var titleSecondaryGlowRadius: CGFloat {
-        34 - (headerProgress * 12)
-    }
-
-    private var compactContentHeight: CGFloat {
-        reduceMotion ? 60 : 58
+        34 - (backgroundProgress * 10)
     }
 }
 

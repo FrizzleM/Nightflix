@@ -67,6 +67,9 @@ struct FeedView: View {
                     }
                     .coordinateSpace(name: homeScrollCoordinateSpace)
                     .ignoresSafeArea(edges: .top)
+                    .trackHomeScrollOffset { newOffset in
+                        updateScrollOffset(newOffset)
+                    }
                     .onPreferenceChange(HomeScrollOffsetPreferenceKey.self) { newOffset in
                         updateScrollOffset(newOffset)
                     }
@@ -519,6 +522,21 @@ private struct HomeScrollOffsetPreferenceKey: PreferenceKey {
 
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func trackHomeScrollOffset(_ onChange: @escaping (CGFloat) -> Void) -> some View {
+        if #available(iOS 18.0, *) {
+            self.onScrollGeometryChange(for: CGFloat.self) { geometry in
+                geometry.contentOffset.y + geometry.contentInsets.top
+            } action: { _, newOffset in
+                onChange(newOffset)
+            }
+        } else {
+            self
+        }
     }
 }
 
