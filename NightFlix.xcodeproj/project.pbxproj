@@ -6,8 +6,53 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		D30D7E1A2FC3198B002687AB /* TMDBConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30D7E192FC3198B002687AB /* TMDBConfig.swift */; };
+		D30D7E1C2FC3198B002687AB /* TMDBModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30D7E1B2FC3198B002687AB /* TMDBModels.swift */; };
+		D30D7E1E2FC3198B002687AB /* TMDBService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30D7E1D2FC3198B002687AB /* TMDBService.swift */; };
+		D30D7E202FC3198B002687AB /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30D7E1F2FC3198B002687AB /* SearchViewModel.swift */; };
+		D30D7E282FC32573002687AB /* NightFlixStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30D7E272FC32573002687AB /* NightFlixStyle.swift */; };
+		D30D7E2A2FC32573002687AB /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30D7E292FC32573002687AB /* MainTabView.swift */; };
+		D30D7E2C2FC325B8002687AB /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30D7E2B2FC325B8002687AB /* FeedViewModel.swift */; };
+		D30D7E2E2FC32603002687AB /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30D7E2D2FC32603002687AB /* SearchView.swift */; };
+		D30D7E302FC32603002687AB /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30D7E2F2FC32603002687AB /* AboutView.swift */; };
+		D30D7E322FC32635002687AB /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30D7E312FC32635002687AB /* FeedView.swift */; };
+		D30D7E342FC32CB6002687AB /* SeasonEpisodeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30D7E332FC32CB6002687AB /* SeasonEpisodeViewModel.swift */; };
+		D30D7E362FC32CE7002687AB /* SeriesDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30D7E352FC32CE7002687AB /* SeriesDetailView.swift */; };
+		D3145AC82FC37B3400C4C886 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3145AC72FC37B3400C4C886 /* HapticManager.swift */; };
+		D3145ACA2FC37B4100C4C886 /* ScrollHapticPreferenceKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3145AC92FC37B4100C4C886 /* ScrollHapticPreferenceKey.swift */; };
+		D33CBF0A2FC402640029763A /* HeroBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33CBF092FC402640029763A /* HeroBannerView.swift */; };
+		D33CBF0C2FC4027C0029763A /* MediaDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33CBF0B2FC4027C0029763A /* MediaDetailView.swift */; };
+		D36A12A52FCB100100000001 /* SectionHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36A12A42FCB100100000001 /* SectionHeaderView.swift */; };
+		D38D7DBC2FC314470050B9DF /* WatchItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38D7DBB2FC314470050B9DF /* WatchItem.swift */; };
+		D38D7DBE2FC314470050B9DF /* WatchHistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38D7DBD2FC314470050B9DF /* WatchHistoryManager.swift */; };
+		D38D7DC02FC314480050B9DF /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38D7DBF2FC314480050B9DF /* WebView.swift */; };
+		D38D7DC22FC314480050B9DF /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38D7DC12FC314480050B9DF /* PlayerView.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		D30D7E192FC3198B002687AB /* TMDBConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMDBConfig.swift; sourceTree = "<group>"; };
+		D30D7E1B2FC3198B002687AB /* TMDBModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMDBModels.swift; sourceTree = "<group>"; };
+		D30D7E1D2FC3198B002687AB /* TMDBService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMDBService.swift; sourceTree = "<group>"; };
+		D30D7E1F2FC3198B002687AB /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
+		D30D7E272FC32573002687AB /* NightFlixStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightFlixStyle.swift; sourceTree = "<group>"; };
+		D30D7E292FC32573002687AB /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		D30D7E2B2FC325B8002687AB /* FeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedViewModel.swift; sourceTree = "<group>"; };
+		D30D7E2D2FC32603002687AB /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		D30D7E2F2FC32603002687AB /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
+		D30D7E312FC32635002687AB /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
+		D30D7E332FC32CB6002687AB /* SeasonEpisodeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonEpisodeViewModel.swift; sourceTree = "<group>"; };
+		D30D7E352FC32CE7002687AB /* SeriesDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesDetailView.swift; sourceTree = "<group>"; };
+		D3145AC72FC37B3400C4C886 /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
+		D3145AC92FC37B4100C4C886 /* ScrollHapticPreferenceKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollHapticPreferenceKey.swift; sourceTree = "<group>"; };
 		D330C4FB2FC313950074B506 /* NightFlix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NightFlix.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D33CBF092FC402640029763A /* HeroBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroBannerView.swift; sourceTree = "<group>"; };
+		D33CBF0B2FC4027C0029763A /* MediaDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDetailView.swift; sourceTree = "<group>"; };
+		D36A12A42FCB100100000001 /* SectionHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionHeaderView.swift; sourceTree = "<group>"; };
+		D38D7DBB2FC314470050B9DF /* WatchItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchItem.swift; sourceTree = "<group>"; };
+		D38D7DBD2FC314470050B9DF /* WatchHistoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHistoryManager.swift; sourceTree = "<group>"; };
+		D38D7DBF2FC314480050B9DF /* WebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
+		D38D7DC12FC314480050B9DF /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -34,6 +79,27 @@
 			children = (
 				D330C4FD2FC313950074B506 /* NightFlix */,
 				D330C4FC2FC313950074B506 /* Products */,
+				D38D7DBB2FC314470050B9DF /* WatchItem.swift */,
+				D38D7DBD2FC314470050B9DF /* WatchHistoryManager.swift */,
+				D38D7DBF2FC314480050B9DF /* WebView.swift */,
+				D38D7DC12FC314480050B9DF /* PlayerView.swift */,
+				D30D7E192FC3198B002687AB /* TMDBConfig.swift */,
+				D30D7E1B2FC3198B002687AB /* TMDBModels.swift */,
+				D30D7E1D2FC3198B002687AB /* TMDBService.swift */,
+				D30D7E1F2FC3198B002687AB /* SearchViewModel.swift */,
+				D30D7E272FC32573002687AB /* NightFlixStyle.swift */,
+				D30D7E292FC32573002687AB /* MainTabView.swift */,
+				D30D7E2B2FC325B8002687AB /* FeedViewModel.swift */,
+				D30D7E2D2FC32603002687AB /* SearchView.swift */,
+				D30D7E2F2FC32603002687AB /* AboutView.swift */,
+				D30D7E312FC32635002687AB /* FeedView.swift */,
+				D30D7E332FC32CB6002687AB /* SeasonEpisodeViewModel.swift */,
+				D30D7E352FC32CE7002687AB /* SeriesDetailView.swift */,
+				D3145AC72FC37B3400C4C886 /* HapticManager.swift */,
+				D3145AC92FC37B4100C4C886 /* ScrollHapticPreferenceKey.swift */,
+				D33CBF092FC402640029763A /* HeroBannerView.swift */,
+				D33CBF0B2FC4027C0029763A /* MediaDetailView.swift */,
+				D36A12A42FCB100100000001 /* SectionHeaderView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -119,6 +185,27 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D30D7E1E2FC3198B002687AB /* TMDBService.swift in Sources */,
+				D38D7DBE2FC314470050B9DF /* WatchHistoryManager.swift in Sources */,
+				D30D7E342FC32CB6002687AB /* SeasonEpisodeViewModel.swift in Sources */,
+				D30D7E302FC32603002687AB /* AboutView.swift in Sources */,
+				D33CBF0A2FC402640029763A /* HeroBannerView.swift in Sources */,
+				D30D7E362FC32CE7002687AB /* SeriesDetailView.swift in Sources */,
+				D33CBF0C2FC4027C0029763A /* MediaDetailView.swift in Sources */,
+				D30D7E282FC32573002687AB /* NightFlixStyle.swift in Sources */,
+				D38D7DC02FC314480050B9DF /* WebView.swift in Sources */,
+				D38D7DC22FC314480050B9DF /* PlayerView.swift in Sources */,
+				D30D7E322FC32635002687AB /* FeedView.swift in Sources */,
+				D30D7E1A2FC3198B002687AB /* TMDBConfig.swift in Sources */,
+				D38D7DBC2FC314470050B9DF /* WatchItem.swift in Sources */,
+				D36A12A52FCB100100000001 /* SectionHeaderView.swift in Sources */,
+				D30D7E202FC3198B002687AB /* SearchViewModel.swift in Sources */,
+				D3145ACA2FC37B4100C4C886 /* ScrollHapticPreferenceKey.swift in Sources */,
+				D3145AC82FC37B3400C4C886 /* HapticManager.swift in Sources */,
+				D30D7E2E2FC32603002687AB /* SearchView.swift in Sources */,
+				D30D7E1C2FC3198B002687AB /* TMDBModels.swift in Sources */,
+				D30D7E2A2FC32573002687AB /* MainTabView.swift in Sources */,
+				D30D7E2C2FC325B8002687AB /* FeedViewModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -256,16 +343,20 @@
 				DEVELOPMENT_TEAM = X53M69UJ7U;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Nightflix;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDarkContent;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = FrizzleM.NightFlix;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -288,16 +379,20 @@
 				DEVELOPMENT_TEAM = X53M69UJ7U;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Nightflix;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleDarkContent;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.6.0;
 				PRODUCT_BUNDLE_IDENTIFIER = FrizzleM.NightFlix;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
