@@ -187,7 +187,7 @@ struct HomeStickyHeaderView: View {
             return
         }
 
-        withAnimation(.easeOut(duration: 0.32)) {
+        withAnimation(.easeOut(duration: 0.24)) {
             isTitleGlowVisible = nextVisibility
         }
     }
