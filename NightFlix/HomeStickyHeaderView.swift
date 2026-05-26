@@ -16,6 +16,7 @@ struct HomeStickyHeaderView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
+    @State private var isTitleGlowVisible = true
 
     var body: some View {
         VStack(spacing: 0) {
@@ -56,6 +57,12 @@ struct HomeStickyHeaderView: View {
             headerBackground
         }
         .shadow(color: .black.opacity(0.3 * backgroundProgress), radius: 18, y: 10)
+        .onAppear {
+            updateTitleGlowVisibility(for: backgroundProgress, animated: false)
+        }
+        .onChange(of: backgroundProgress) { _, newValue in
+            updateTitleGlowVisibility(for: newValue, animated: true)
+        }
     }
 
     static func scrollContentTopPadding(topSafeArea: CGFloat) -> CGFloat {
@@ -68,7 +75,7 @@ struct HomeStickyHeaderView: View {
             .foregroundStyle(NightFlixStyle.accentColor)
             .lineLimit(1)
             .minimumScaleFactor(0.68)
-            .nightflixTitleGlow()
+            .nightflixTitleGlow(opacity: titleGlowOpacity)
             .shadow(color: NightFlixStyle.titleGlowColor.opacity(titleGlowOpacity), radius: titleGlowRadius)
             .shadow(color: NightFlixStyle.titleSecondaryGlowColor.opacity(titleGlowOpacity), radius: titleSecondaryGlowRadius)
             .nightflixEntrance(
@@ -141,20 +148,48 @@ struct HomeStickyHeaderView: View {
     }
 
     private var titleGlowOpacity: CGFloat {
-        colorScheme == .dark ? 1 - (backgroundProgress * 0.16) : 1
+        isTitleGlowVisible ? 1 : 0
     }
 
     private var titleGlowRadius: CGFloat {
-        16 - (backgroundProgress * 4)
+        16
     }
 
     private var titleSecondaryGlowRadius: CGFloat {
-        34 - (backgroundProgress * 10)
+        34
     }
 
     private var searchShortcutAnimation: Animation? {
         guard animationsEnabled, !reduceMotion else { return nil }
         return .easeOut(duration: 0.18)
+    }
+
+    private func updateTitleGlowVisibility(for progress: CGFloat, animated: Bool) {
+        let nextVisibility: Bool?
+
+        if progress <= 0 {
+            nextVisibility = true
+        } else if progress >= 1 {
+            nextVisibility = false
+        } else {
+            nextVisibility = nil
+        }
+
+        guard let nextVisibility, nextVisibility != isTitleGlowVisible else { return }
+
+        guard animated, animationsEnabled, !reduceMotion else {
+            var transaction = Transaction()
+            transaction.animation = nil
+
+            withTransaction(transaction) {
+                isTitleGlowVisible = nextVisibility
+            }
+            return
+        }
+
+        withAnimation(.easeInOut(duration: 0.72)) {
+            isTitleGlowVisible = nextVisibility
+        }
     }
 }
 
