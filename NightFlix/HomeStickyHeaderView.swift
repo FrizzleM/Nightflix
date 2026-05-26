@@ -40,14 +40,14 @@ struct HomeStickyHeaderView: View {
             .frame(height: headerContentHeight, alignment: .center)
 
             Rectangle()
-                .fill(Color.white.opacity(0.08 * headerProgress))
+                .fill(Color.white.opacity(0.08 * backgroundProgress))
                 .frame(height: 1)
         }
         .frame(maxWidth: .infinity, alignment: .top)
         .background(alignment: .top) {
             headerBackground
         }
-        .shadow(color: .black.opacity(0.28 * headerProgress), radius: 16, y: 10)
+        .shadow(color: .black.opacity(0.3 * backgroundProgress), radius: 18, y: 10)
     }
 
     static func scrollContentTopPadding(topSafeArea: CGFloat) -> CGFloat {
@@ -77,18 +77,18 @@ struct HomeStickyHeaderView: View {
     private var headerBackground: some View {
         ZStack(alignment: .bottom) {
             Color.black
-                .opacity(headerBackgroundOpacity)
+                .opacity(0.92 * backgroundProgress)
 
             LinearGradient(
                 colors: [
-                    Color.black.opacity(topGradientOpacity),
-                    Color.black.opacity(topGradientOpacity * 0.56),
-                    Color.black.opacity(0)
+                    Color.black.opacity(0.98),
+                    Color.black.opacity(0.94),
+                    Color.black.opacity(0.82)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .opacity(1 - headerProgress)
+            .opacity(backgroundProgress)
         }
         .frame(height: max(topSafeArea, 0) + headerContentHeight + 1)
         .ignoresSafeArea(edges: .top)
@@ -104,6 +104,14 @@ struct HomeStickyHeaderView: View {
         return rawProgress
     }
 
+    private var backgroundProgress: CGFloat {
+        guard animationsEnabled, !reduceMotion else {
+            return scrollOffset > 18 ? 1 : 0
+        }
+
+        return min(max((scrollOffset - 12) / 52, 0), 1)
+    }
+
     private var headerContentHeight: CGFloat {
         compactContentHeight + (Self.expandedContentHeight - compactContentHeight) * (1 - headerProgress)
     }
@@ -114,16 +122,8 @@ struct HomeStickyHeaderView: View {
         return compactSize + (expandedSize - compactSize) * (1 - headerProgress)
     }
 
-    private var headerBackgroundOpacity: CGFloat {
-        min(headerProgress * 1.05, 1)
-    }
-
-    private var topGradientOpacity: CGFloat {
-        colorScheme == .dark ? 0.36 : 0.22
-    }
-
     private var menuForegroundColor: Color {
-        if colorScheme == .dark || headerProgress > 0.42 {
+        if colorScheme == .dark || backgroundProgress > 0.35 {
             return .white
         }
 
