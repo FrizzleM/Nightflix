@@ -13,6 +13,7 @@ struct FeedView: View {
     let shouldAnimateNightflixTitle: Bool
     @Binding var selectedHomeMenuDestination: HomeMenuDestination?
     let onOpenHomeMenu: () -> Void
+    let onHistoryDeleted: () -> Void
 
     @EnvironmentObject private var settings: AppSettingsManager
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -144,6 +145,12 @@ struct FeedView: View {
                         historyManager: historyManager,
                         continueWatchingManager: continueWatchingManager,
                         myListManager: myListManager
+                    )
+                case .settings:
+                    SettingsView(
+                        historyManager: historyManager,
+                        continueWatchingManager: continueWatchingManager,
+                        onHistoryDeleted: onHistoryDeleted
                     )
                 }
             }
@@ -598,6 +605,7 @@ private extension View {
         showNightflixTitle: true,
         shouldAnimateNightflixTitle: false,
         selectedHomeMenuDestination: .constant(nil),
-        onOpenHomeMenu: { }
+        onOpenHomeMenu: { },
+        onHistoryDeleted: { }
     )
 }

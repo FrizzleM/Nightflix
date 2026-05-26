@@ -33,7 +33,8 @@ struct MainTabView: View {
                     showNightflixTitle: showNightflixTitle,
                     shouldAnimateNightflixTitle: shouldAnimateNightflixTitle,
                     selectedHomeMenuDestination: $selectedHomeMenuDestination,
-                    onOpenHomeMenu: openHomeMenu
+                    onOpenHomeMenu: openHomeMenu,
+                    onHistoryDeleted: restartAppState
                 )
                     .tabItem {
                         Label("Home", systemImage: "house.fill")
@@ -64,6 +65,9 @@ struct MainTabView: View {
                 },
                 onCategories: {
                     selectHomeMenuDestination(.categories)
+                },
+                onSettings: {
+                    selectHomeMenuDestination(.settings)
                 },
                 onDonate: {
                     openDonate()

@@ -225,7 +225,7 @@ struct AboutView: View {
     }
 }
 
-private struct SettingsView: View {
+struct SettingsView: View {
     let historyManager: WatchHistoryManager
     let continueWatchingManager: ContinueWatchingManager
     let onHistoryDeleted: () -> Void

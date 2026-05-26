@@ -3,6 +3,7 @@ import SwiftUI
 enum HomeMenuDestination: String, Identifiable {
     case myList
     case categories
+    case settings
 
     var id: String { rawValue }
 }
@@ -12,6 +13,7 @@ struct HomeMenuSheet: View {
     let animationsEnabled: Bool
     let onMyList: () -> Void
     let onCategories: () -> Void
+    let onSettings: () -> Void
     let onDonate: () -> Void
     let onDismiss: () -> Void
 
@@ -43,6 +45,7 @@ struct HomeMenuSheet: View {
                             onClose: onDismiss,
                             onMyList: onMyList,
                             onCategories: onCategories,
+                            onSettings: onSettings,
                             onDonate: onDonate
                         )
                         .frame(width: panelWidth)
@@ -77,6 +80,7 @@ private struct SideMenuPanel: View {
     let onClose: () -> Void
     let onMyList: () -> Void
     let onCategories: () -> Void
+    let onSettings: () -> Void
     let onDonate: () -> Void
 
     var body: some View {
@@ -87,6 +91,7 @@ private struct SideMenuPanel: View {
                 menuRow(title: "My List", systemImage: "bookmark.fill", action: onMyList)
                 menuRow(title: "Categories", systemImage: "square.grid.2x2.fill", action: onCategories)
                 menuRow(title: "Donate", systemImage: "cup.and.saucer.fill", showsExternalIndicator: true, action: onDonate)
+                settingsButton
             }
             .frame(maxWidth: .infinity)
 
@@ -182,6 +187,49 @@ private struct SideMenuPanel: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
+    }
+
+    private var settingsButton: some View {
+        Button {
+            onSettings()
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(NightFlixStyle.accentColor.opacity(0.16))
+                        .frame(width: 42, height: 42)
+
+                    Image(systemName: "gearshape.fill")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(NightFlixStyle.accentColor)
+                }
+
+                Text("Settings")
+                    .font(.headline.weight(.black))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.black))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(NightFlixStyle.accentColor, in: Circle())
+            }
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 66)
+            .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(NightFlixStyle.accentColor.opacity(0.82), lineWidth: 1.5)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Settings")
     }
 
     private var panelShape: UnevenRoundedRectangle {
