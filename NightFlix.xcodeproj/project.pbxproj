@@ -20,6 +20,7 @@
 		D30D7E342FC32CB6002687AB /* SeasonEpisodeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30D7E332FC32CB6002687AB /* SeasonEpisodeViewModel.swift */; };
 		D30D7E362FC32CE7002687AB /* SeriesDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30D7E352FC32CE7002687AB /* SeriesDetailView.swift */; };
 		D30E74FA2FC6275C001F757F /* MyListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D30E74EB2FC6275C001F757F /* MyListView.swift */; };
+		D30E75012FC6367F001F757F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D30E75002FC6367F001F757F /* LaunchScreen.storyboard */; };
 		D3145AC82FC37B3400C4C886 /* HapticManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3145AC72FC37B3400C4C886 /* HapticManager.swift */; };
 		D3145ACA2FC37B4100C4C886 /* ScrollHapticPreferenceKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3145AC92FC37B4100C4C886 /* ScrollHapticPreferenceKey.swift */; };
 		D33CBF0A2FC402640029763A /* HeroBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33CBF092FC402640029763A /* HeroBannerView.swift */; };
@@ -45,6 +46,7 @@
 		D30D7E332FC32CB6002687AB /* SeasonEpisodeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonEpisodeViewModel.swift; sourceTree = "<group>"; };
 		D30D7E352FC32CE7002687AB /* SeriesDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeriesDetailView.swift; sourceTree = "<group>"; };
 		D30E74EB2FC6275C001F757F /* MyListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyListView.swift; sourceTree = "<group>"; };
+		D30E75002FC6367F001F757F /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		D3145AC72FC37B3400C4C886 /* HapticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticManager.swift; sourceTree = "<group>"; };
 		D3145AC92FC37B4100C4C886 /* ScrollHapticPreferenceKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollHapticPreferenceKey.swift; sourceTree = "<group>"; };
 		D330C4FB2FC313950074B506 /* NightFlix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NightFlix.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -79,6 +81,7 @@
 		D330C4F22FC313950074B506 = {
 			isa = PBXGroup;
 			children = (
+				D30E75002FC6367F001F757F /* LaunchScreen.storyboard */,
 				D330C4FD2FC313950074B506 /* NightFlix */,
 				D330C4FC2FC313950074B506 /* Products */,
 				D38D7DBB2FC314470050B9DF /* WatchItem.swift */,
@@ -178,6 +181,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D30E75012FC6367F001F757F /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -360,7 +364,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.1;
+				MARKETING_VERSION = 0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = FrizzleM.NightFlix;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -396,7 +400,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.7.1;
+				MARKETING_VERSION = 0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = FrizzleM.NightFlix;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
