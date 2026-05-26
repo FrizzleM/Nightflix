@@ -124,6 +124,7 @@ struct SearchView: View {
 
 struct MediaSearchBar: View {
     @Binding var query: String
+    var focusRequest = 0
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -166,6 +167,10 @@ struct MediaSearchBar: View {
             } else {
                 HapticManager.shared.prepareSelection()
             }
+        }
+        .onChange(of: focusRequest) { _, newValue in
+            guard newValue > 0 else { return }
+            isFocused = true
         }
     }
 }

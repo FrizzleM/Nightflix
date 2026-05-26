@@ -2,6 +2,8 @@ import SwiftUI
 
 struct FeedView: View {
     private let homeScrollCoordinateSpace = "home-feed-scroll"
+    private let homeTopAnchorId = "home-top-anchor"
+    private let homeSearchAnchorId = "home-search-anchor"
 
     let historyManager: WatchHistoryManager
     let continueWatchingManager: ContinueWatchingManager
@@ -23,6 +25,8 @@ struct FeedView: View {
     @State private var showContent = false
     @State private var hasHandledStartupContentAnimation = false
     @State private var scrollOffset: CGFloat = 0
+    @State private var searchShortcutRequest = 0
+    @State private var searchFocusRequest = 0
 
     var body: some View {
         NavigationStack {
@@ -30,58 +34,66 @@ struct FeedView: View {
                 ZStack(alignment: .top) {
                     NightFlixStyle.backgroundColor.ignoresSafeArea()
 
-                    ScrollView(.vertical, showsIndicators: false) {
-                        scrollOffsetReader
+                    ScrollViewReader { scrollProxy in
+                        ScrollView(.vertical, showsIndicators: false) {
+                            scrollOffsetReader
+                                .id(homeTopAnchorId)
 
-                        LazyVStack(alignment: .leading, spacing: 24) {
-                            feedSearchBar
+                            LazyVStack(alignment: .leading, spacing: 24) {
+                                feedSearchBar
+                                    .id(homeSearchAnchorId)
 
-                            if let playErrorMessage {
-                                messageRow(playErrorMessage, systemImage: "exclamationmark.circle.fill")
+                                if let playErrorMessage {
+                                    messageRow(playErrorMessage, systemImage: "exclamationmark.circle.fill")
+                                }
+
+                                if searchViewModel.hasActiveQuery {
+                                    MediaSearchResultsView(
+                                        title: "Search Results",
+                                        viewModel: searchViewModel,
+                                        playErrorMessage: nil,
+                                        isEntranceVisible: showContent,
+                                        baseDelay: 0.42,
+                                        animationsEnabled: contentAnimationsEnabled,
+                                        onSelectResult: showDetail
+                                    )
+                                } else {
+                                    featuredHeroSection(baseDelay: 0.42)
+                                    continueWatchingSection(baseDelay: 0.5)
+                                    feedSection(title: "Trending This Week", section: viewModel.trending, baseDelay: 0.54)
+                                    feedSection(title: "Popular Movies", section: viewModel.popularMovies, baseDelay: 0.6)
+                                    feedSection(title: "Popular Series", section: viewModel.popularSeries, baseDelay: 0.66)
+                                    feedSection(title: "Top Rated Movies", section: viewModel.topRatedMovies, baseDelay: 0.72)
+                                    feedSection(title: "Top Rated Series", section: viewModel.topRatedSeries, baseDelay: 0.78)
+                                }
                             }
-
-                            if searchViewModel.hasActiveQuery {
-                                MediaSearchResultsView(
-                                    title: "Search Results",
-                                    viewModel: searchViewModel,
-                                    playErrorMessage: nil,
-                                    isEntranceVisible: showContent,
-                                    baseDelay: 0.42,
-                                    animationsEnabled: contentAnimationsEnabled,
-                                    onSelectResult: showDetail
-                                )
+                            .padding(.horizontal, 20)
+                            .padding(.top, HomeStickyHeaderView.scrollContentTopPadding(topSafeArea: geometry.safeAreaInsets.top))
+                            .padding(.bottom, 120)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .coordinateSpace(name: homeScrollCoordinateSpace)
+                        .ignoresSafeArea(edges: .top)
+                        .trackHomeScrollOffset { newOffset in
+                            updateScrollOffset(newOffset)
+                        }
+                        .onPreferenceChange(HomeScrollOffsetPreferenceKey.self) { newOffset in
+                            updateScrollOffset(newOffset)
+                        }
+                        .refreshable {
+                            HapticManager.shared.mediumImpact()
+                            await viewModel.refresh()
+                            if feedErrorSignature.isEmpty {
+                                HapticManager.shared.success()
                             } else {
-                                featuredHeroSection(baseDelay: 0.42)
-                                continueWatchingSection(baseDelay: 0.5)
-                                feedSection(title: "Trending This Week", section: viewModel.trending, baseDelay: 0.54)
-                                feedSection(title: "Popular Movies", section: viewModel.popularMovies, baseDelay: 0.6)
-                                feedSection(title: "Popular Series", section: viewModel.popularSeries, baseDelay: 0.66)
-                                feedSection(title: "Top Rated Movies", section: viewModel.topRatedMovies, baseDelay: 0.72)
-                                feedSection(title: "Top Rated Series", section: viewModel.topRatedSeries, baseDelay: 0.78)
+                                HapticManager.shared.error()
                             }
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.top, HomeStickyHeaderView.scrollContentTopPadding(topSafeArea: geometry.safeAreaInsets.top))
-                        .padding(.bottom, 120)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .coordinateSpace(name: homeScrollCoordinateSpace)
-                    .ignoresSafeArea(edges: .top)
-                    .trackHomeScrollOffset { newOffset in
-                        updateScrollOffset(newOffset)
-                    }
-                    .onPreferenceChange(HomeScrollOffsetPreferenceKey.self) { newOffset in
-                        updateScrollOffset(newOffset)
-                    }
-                    .refreshable {
-                        HapticManager.shared.mediumImpact()
-                        await viewModel.refresh()
-                        if feedErrorSignature.isEmpty {
-                            HapticManager.shared.success()
-                        } else {
-                            HapticManager.shared.error()
+                        .onChange(of: searchShortcutRequest) { _, _ in
+                            scrollToSearchBar(with: scrollProxy)
                         }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                     HomeStickyHeaderView(
                         scrollOffset: scrollOffset,
@@ -89,7 +101,9 @@ struct FeedView: View {
                         showTitle: showNightflixTitle,
                         shouldAnimateTitle: shouldAnimateNightflixTitle,
                         showMenuButton: showContent,
+                        showSearchShortcut: shouldShowSearchShortcut(topSafeArea: geometry.safeAreaInsets.top),
                         animationsEnabled: contentAnimationsEnabled,
+                        onSearchShortcut: requestSearchBarScroll,
                         onOpenMenu: onOpenHomeMenu
                     )
                     .zIndex(100)
@@ -159,7 +173,7 @@ struct FeedView: View {
     }
 
     private var feedSearchBar: some View {
-        MediaSearchBar(query: searchQueryBinding)
+        MediaSearchBar(query: searchQueryBinding, focusRequest: searchFocusRequest)
             .frame(maxWidth: .infinity)
             .nightflixEntrance(isVisible: showContent, delay: 0.35, yOffset: 14, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
     }
@@ -392,10 +406,45 @@ struct FeedView: View {
         settings.animationMode != .off && !reduceMotion
     }
 
+    private func shouldShowSearchShortcut(topSafeArea: CGFloat) -> Bool {
+        showContent && scrollOffset > searchShortcutThreshold(topSafeArea: topSafeArea)
+    }
+
+    private func searchShortcutThreshold(topSafeArea: CGFloat) -> CGFloat {
+        HomeStickyHeaderView.scrollContentTopPadding(topSafeArea: topSafeArea) - (topSafeArea + HomeStickyHeaderView.contentHeight)
+            + 58
+    }
+
     private func updateScrollOffset(_ newOffset: CGFloat) {
         let clampedOffset = max(newOffset, 0)
         guard abs(scrollOffset - clampedOffset) > 0.5 else { return }
         scrollOffset = clampedOffset
+    }
+
+    private func requestSearchBarScroll() {
+        searchShortcutRequest += 1
+    }
+
+    private func scrollToSearchBar(with proxy: ScrollViewProxy) {
+        HapticManager.shared.selection()
+
+        guard contentAnimationsEnabled else {
+            proxy.scrollTo(homeTopAnchorId, anchor: .top)
+            focusSearchBar(after: .milliseconds(50))
+            return
+        }
+
+        withAnimation(.easeInOut(duration: 0.34)) {
+            proxy.scrollTo(homeTopAnchorId, anchor: .top)
+        }
+        focusSearchBar(after: .milliseconds(360))
+    }
+
+    private func focusSearchBar(after delay: Duration) {
+        Task {
+            try? await Task.sleep(for: delay)
+            searchFocusRequest += 1
+        }
     }
 
     private func prepareStartupContentAnimation() {

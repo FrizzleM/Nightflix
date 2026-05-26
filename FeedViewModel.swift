@@ -47,40 +47,31 @@ final class FeedViewModel {
         topRatedSeries.isLoading = true
         isLoadingFeaturedHero = true
 
-        async let featuredHeroTask = loadFeaturedHeroItem()
         async let trendingTask = loadTrending()
         async let popularMoviesTask = loadPopularMovies()
         async let popularSeriesTask = loadPopularSeries()
         async let topRatedMoviesTask = loadTopRatedMovies()
         async let topRatedSeriesTask = loadTopRatedSeries()
 
-        featuredHeroItem = await featuredHeroTask
+        let trendingResult = await trendingTask
+        featuredHeroItem = trendingResult.featuredHeroItem
         isLoadingFeaturedHero = false
-        trending = await trendingTask
+        trending = trendingResult.section
         popularMovies = await popularMoviesTask
         popularSeries = await popularSeriesTask
         topRatedMovies = await topRatedMoviesTask
         topRatedSeries = await topRatedSeriesTask
     }
 
-    private func loadFeaturedHeroItem() async -> MediaItem? {
+    private func loadTrending() async -> (section: FeedSection, featuredHeroItem: MediaItem?) {
         do {
-            return try await service.fetchFeaturedHeroItem()
+            let results = try await service.trendingAllWeek()
+            let items = results.compactMap(FeedItem.init(trendingResult:))
+            return (section(from: items), featuredHeroItem(from: results))
         } catch is CancellationError {
-            return featuredHeroItem
+            return (cancelledSection(from: trending), featuredHeroItem)
         } catch {
-            return nil
-        }
-    }
-
-    private func loadTrending() async -> FeedSection {
-        do {
-            let items = try await service.trendingAllWeek().compactMap(FeedItem.init(trendingResult:))
-            return section(from: items)
-        } catch is CancellationError {
-            return cancelledSection(from: trending)
-        } catch {
-            return FeedSection(errorMessage: error.localizedDescription)
+            return (FeedSection(errorMessage: error.localizedDescription), nil)
         }
     }
 
@@ -138,5 +129,27 @@ final class FeedViewModel {
 
     private func cancelledSection(from section: FeedSection) -> FeedSection {
         FeedSection(items: section.items, errorMessage: section.errorMessage)
+    }
+
+    private func featuredHeroItem(from results: [TMDBTrendingResult]) -> MediaItem? {
+        let mediaItems = results.compactMap { result -> MediaItem? in
+            guard result.mediaType == "movie" || result.mediaType == "tv" else {
+                return nil
+            }
+
+            return MediaItem(
+                id: result.id,
+                mediaType: result.mediaType,
+                title: result.title,
+                name: result.name,
+                overview: result.overview,
+                releaseDate: result.releaseDate,
+                firstAirDate: result.firstAirDate,
+                posterPath: result.posterPath,
+                backdropPath: result.backdropPath
+            )
+        }
+
+        return mediaItems.first { $0.backdropPath != nil } ?? mediaItems.first
     }
 }

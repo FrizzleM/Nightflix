@@ -37,9 +37,14 @@ final class ContinueWatchingManager {
         }
 
         do {
-            items = try JSONDecoder().decode([ContinueWatchingItem].self, from: data)
-            normalizeItems()
-            save()
+            let decodedItems = try JSONDecoder().decode([ContinueWatchingItem].self, from: data)
+            let normalizedItems = normalizedItems(decodedItems)
+
+            items = normalizedItems
+
+            if normalizedItems != decodedItems {
+                save()
+            }
         } catch {
             items = []
             userDefaults.removeObject(forKey: storageKey)
@@ -47,8 +52,13 @@ final class ContinueWatchingManager {
     }
 
     private func normalizeItems() {
+        items = normalizedItems(items)
+    }
+
+    private func normalizedItems(_ sourceItems: [ContinueWatchingItem]) -> [ContinueWatchingItem] {
         var seenKeys = Set<String>()
-        items = items
+
+        let normalizedItems = sourceItems
             .sorted { $0.lastWatchedDate > $1.lastWatchedDate }
             .filter { item in
                 let key = "\(item.type.rawValue)-\(item.tmdbId)"
@@ -56,7 +66,8 @@ final class ContinueWatchingManager {
                 seenKeys.insert(key)
                 return true
             }
-        items = Array(items.prefix(maxItems))
+
+        return Array(normalizedItems.prefix(maxItems))
     }
 
     private func save() {

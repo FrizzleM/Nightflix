@@ -9,7 +9,9 @@ struct HomeStickyHeaderView: View {
     let showTitle: Bool
     let shouldAnimateTitle: Bool
     let showMenuButton: Bool
+    let showSearchShortcut: Bool
     let animationsEnabled: Bool
+    let onSearchShortcut: () -> Void
     let onOpenMenu: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -25,6 +27,11 @@ struct HomeStickyHeaderView: View {
 
                 Spacer(minLength: 12)
 
+                if showSearchShortcut {
+                    searchShortcutButton
+                        .transition(.opacity.combined(with: .scale(scale: 0.92)))
+                }
+
                 HomeMenuButton(foregroundColor: menuForegroundColor) {
                     onOpenMenu()
                 }
@@ -38,6 +45,7 @@ struct HomeStickyHeaderView: View {
             }
             .padding(.horizontal, 20)
             .frame(height: Self.contentHeight, alignment: .center)
+            .animation(searchShortcutAnimation, value: showSearchShortcut)
 
             Rectangle()
                 .fill(Color.white.opacity(0.08 * backgroundProgress))
@@ -74,6 +82,20 @@ struct HomeStickyHeaderView: View {
             .layoutPriority(1)
     }
 
+    private var searchShortcutButton: some View {
+        Button {
+            onSearchShortcut()
+        } label: {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 19, weight: .bold))
+                .foregroundStyle(menuForegroundColor)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Back to search")
+    }
+
     private var headerBackground: some View {
         ZStack(alignment: .bottom) {
             Color.black
@@ -99,7 +121,7 @@ struct HomeStickyHeaderView: View {
             return scrollOffset > 18 ? 1 : 0
         }
 
-        return min(max((scrollOffset - 12) / 88, 0), 1)
+        return min(max((scrollOffset - 12) / 176, 0), 1)
     }
 
     private var headerContentHeight: CGFloat {
@@ -129,6 +151,11 @@ struct HomeStickyHeaderView: View {
     private var titleSecondaryGlowRadius: CGFloat {
         34 - (backgroundProgress * 10)
     }
+
+    private var searchShortcutAnimation: Animation? {
+        guard animationsEnabled, !reduceMotion else { return nil }
+        return .easeOut(duration: 0.18)
+    }
 }
 
 #Preview {
@@ -141,7 +168,9 @@ struct HomeStickyHeaderView: View {
             showTitle: true,
             shouldAnimateTitle: false,
             showMenuButton: true,
+            showSearchShortcut: true,
             animationsEnabled: true,
+            onSearchShortcut: { },
             onOpenMenu: { }
         )
     }

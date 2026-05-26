@@ -6,6 +6,7 @@ final class MyListManager: ObservableObject {
 
     private let storageKey = "myListItems"
     private let userDefaults: UserDefaults
+    private var itemKeys: Set<String> = []
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -23,9 +24,13 @@ final class MyListManager: ObservableObject {
     }
 
     func remove(mediaType: MediaType, tmdbId: Int) {
+        let originalCount = items.count
         items.removeAll { item in
             item.mediaType == mediaType && item.tmdbId == tmdbId
         }
+        guard items.count != originalCount else { return }
+
+        rebuildItemKeys()
         save()
     }
 
@@ -38,38 +43,61 @@ final class MyListManager: ObservableObject {
     }
 
     func contains(mediaType: MediaType, tmdbId: Int) -> Bool {
-        items.contains { item in
-            item.mediaType == mediaType && item.tmdbId == tmdbId
-        }
+        itemKeys.contains(Self.key(mediaType: mediaType, tmdbId: tmdbId))
     }
 
     func load() {
         guard let data = userDefaults.data(forKey: storageKey) else {
             items = []
+            itemKeys = []
             return
         }
 
         do {
-            items = try JSONDecoder().decode([MyListItem].self, from: data)
-            normalizeItems()
-            save()
+            let decodedItems = try JSONDecoder().decode([MyListItem].self, from: data)
+            let normalizedItems = normalizedItems(decodedItems)
+
+            items = normalizedItems
+            rebuildItemKeys()
+
+            if normalizedItems != decodedItems {
+                save()
+            }
         } catch {
             items = []
+            itemKeys = []
             userDefaults.removeObject(forKey: storageKey)
         }
     }
 
     private func normalizeItems() {
+        items = normalizedItems(items)
+        rebuildItemKeys()
+    }
+
+    private func normalizedItems(_ sourceItems: [MyListItem]) -> [MyListItem] {
         var seenKeys = Set<String>()
 
-        items = items
+        return sourceItems
             .sorted { $0.dateAdded > $1.dateAdded }
             .filter { item in
-                let key = "\(item.mediaType.rawValue)-\(item.tmdbId)"
+                let key = Self.key(for: item)
                 guard !seenKeys.contains(key) else { return false }
                 seenKeys.insert(key)
                 return true
             }
+    }
+
+    private func rebuildItemKeys() {
+        itemKeys = Set(items.map(Self.key(for:)))
+    }
+
+    nonisolated private static func key(for item: MyListItem) -> String {
+        key(mediaType: item.mediaType, tmdbId: item.tmdbId)
+    }
+
+    nonisolated private static func key(mediaType: MediaType, tmdbId: Int) -> String {
+        "\(mediaType.rawValue)-\(tmdbId)"
     }
 
     private func save() {

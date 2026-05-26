@@ -807,6 +807,8 @@ final class MediaDetailViewModel {
     private let service: TMDBService
     private var loadedKey: String?
     private var seasonCache: [Int: SeasonDetail] = [:]
+    private var detailRequestID: UUID?
+    private var seasonRequestID: UUID?
 
     init() {
         self.service = TMDBService()
@@ -819,9 +821,14 @@ final class MediaDetailViewModel {
     }
 
     func reload(id: Int, mediaType: String) async {
+        let requestID = UUID()
+        detailRequestID = requestID
+        seasonRequestID = nil
         loadedKey = "\(mediaType)-\(id)"
         isLoading = true
+        isLoadingSeason = false
         errorMessage = nil
+        seasonErrorMessage = nil
         movieDetail = nil
         tvDetail = nil
         selectedSeasonDetail = nil
@@ -830,9 +837,14 @@ final class MediaDetailViewModel {
 
         do {
             if mediaType == "movie" {
-                movieDetail = try await service.fetchMovieDetail(movieId: id)
+                let detail = try await service.fetchMovieDetail(movieId: id)
+                guard detailRequestID == requestID else { return }
+
+                movieDetail = detail
             } else {
                 let detail = try await service.fetchTVSeriesDetail(seriesId: id)
+                guard detailRequestID == requestID else { return }
+
                 tvDetail = detail
 
                 if let firstSeason = detail.seasons.first(where: { $0.seasonNumber > 0 }) {
@@ -840,19 +852,29 @@ final class MediaDetailViewModel {
                 }
             }
         } catch is CancellationError {
+            guard detailRequestID == requestID else { return }
         } catch {
+            guard detailRequestID == requestID else { return }
+
             errorMessage = "Please check your connection and try again."
         }
 
+        guard detailRequestID == requestID else { return }
+
         isLoading = false
+        detailRequestID = nil
     }
 
     func selectSeason(seriesId: Int, seasonNumber: Int, forceReload: Bool = false) async {
+        let requestID = UUID()
+        seasonRequestID = requestID
         selectedSeasonNumber = seasonNumber
         seasonErrorMessage = nil
 
         if !forceReload, let cachedSeason = seasonCache[seasonNumber] {
             selectedSeasonDetail = cachedSeason
+            isLoadingSeason = false
+            seasonRequestID = nil
             return
         }
 
@@ -861,14 +883,22 @@ final class MediaDetailViewModel {
 
         do {
             let season = try await service.fetchSeasonDetail(seriesId: seriesId, seasonNumber: seasonNumber)
+            guard seasonRequestID == requestID else { return }
+
             seasonCache[seasonNumber] = season
             selectedSeasonDetail = season
         } catch is CancellationError {
+            guard seasonRequestID == requestID else { return }
         } catch {
+            guard seasonRequestID == requestID else { return }
+
             seasonErrorMessage = "Episodes could not be loaded. Please try again."
         }
 
+        guard seasonRequestID == requestID else { return }
+
         isLoadingSeason = false
+        seasonRequestID = nil
     }
 }
 
