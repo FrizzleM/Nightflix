@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct AboutView: View {
@@ -14,6 +15,8 @@ struct AboutView: View {
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
     @State private var entranceVisible = false
     @State private var isShowingDeleteHistoryConfirmation = false
+    @State private var isShowingDeleteCacheConfirmation = false
+    @State private var cacheSizeBytes = 0
 
     var body: some View {
         NavigationStack {
@@ -46,8 +49,12 @@ struct AboutView: View {
                             .nightflixEntrance(isVisible: entranceVisible, delay: 0.59, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
                             .padding(.horizontal, 20)
 
+                        deleteCacheButton
+                            .nightflixEntrance(isVisible: entranceVisible, delay: 0.62, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
+                            .padding(.horizontal, 20)
+
                         appVersionFooter
-                            .nightflixEntrance(isVisible: entranceVisible, delay: 0.65, yOffset: 8, animationsEnabled: aboutAnimationsEnabled)
+                            .nightflixEntrance(isVisible: entranceVisible, delay: 0.68, yOffset: 8, animationsEnabled: aboutAnimationsEnabled)
                             .padding(.horizontal, 20)
                             .padding(.bottom, 108)
                     }
@@ -59,6 +66,7 @@ struct AboutView: View {
         }
         .onAppear {
             replayEntranceAnimationIfNeeded()
+            refreshCacheSize()
         }
         .onChange(of: animationTrigger) { _, _ in
             replayEntranceAnimationIfNeeded()
@@ -76,6 +84,14 @@ struct AboutView: View {
             }
         } message: {
             Text("This will remove Continue Watching and saved watch history from this device.")
+        }
+        .alert("Delete cache?", isPresented: $isShowingDeleteCacheConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete Cache", role: .destructive) {
+                deleteCache()
+            }
+        } message: {
+            Text("This will remove cached TMDB data from this device. It will be downloaded again when needed.")
         }
         .tint(NightFlixStyle.accentColor)
     }
@@ -274,11 +290,71 @@ struct AboutView: View {
         .controlSize(.large)
     }
 
+    private var deleteCacheButton: some View {
+        Button(role: .destructive) {
+            HapticManager.shared.warning()
+            isShowingDeleteCacheConfirmation = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "trash.fill")
+                    .font(.headline.weight(.bold))
+
+                Text("Delete Cache (\(cacheSizeText))")
+                    .font(.headline.weight(.bold))
+            }
+            .foregroundStyle(NightFlixStyle.accentColor)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+            .padding(.horizontal, 18)
+            .background(NightFlixStyle.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(NightFlixStyle.accentColor.opacity(0.78), lineWidth: 1)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .hoverEffect(.highlight)
+            .accessibilityHint("Deletes cached TMDB data from this device.")
+        }
+        .buttonStyle(.plain)
+        .controlSize(.large)
+    }
+
     private func deleteHistory() {
         historyManager.clear()
         continueWatchingManager.clear()
         HapticManager.shared.success()
         onHistoryDeleted()
+    }
+
+    private func deleteCache() {
+        Task {
+            await TMDBService.clearCache()
+            let cacheSizeBytes = await TMDBService.cacheSizeBytes()
+
+            await MainActor.run {
+                self.cacheSizeBytes = cacheSizeBytes
+                HapticManager.shared.success()
+            }
+        }
+    }
+
+    private var cacheSizeText: String {
+        guard cacheSizeBytes > 0 else { return "0 MB" }
+
+        let megabytes = Double(cacheSizeBytes) / 1_048_576
+        guard megabytes >= 0.1 else { return "<0.1 MB" }
+
+        return "\(String(format: "%.1f", megabytes)) MB"
+    }
+
+    private func refreshCacheSize() {
+        Task {
+            let cacheSizeBytes = await TMDBService.cacheSizeBytes()
+
+            await MainActor.run {
+                self.cacheSizeBytes = cacheSizeBytes
+            }
+        }
     }
 
     private func externalLink(title: String, systemImage: String, url: String) -> some View {

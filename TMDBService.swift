@@ -53,6 +53,14 @@ struct TMDBService {
         self.session = session
     }
 
+    static func clearCache() async {
+        await responseCache.clear()
+    }
+
+    static func cacheSizeBytes() async -> Int {
+        await responseCache.sizeBytes()
+    }
+
     func searchMovies(query: String) async throws -> [TMDBMovieResult] {
         let response: TMDBSearchResponse<TMDBMovieResult> = try await requestSearch(
             path: "/3/search/movie",
@@ -278,6 +286,17 @@ private actor TMDBResponseCache {
 
     init(urlCache: URLCache) {
         self.urlCache = urlCache
+    }
+
+    func clear() {
+        entries = [:]
+        inFlightTasks.values.forEach { $0.cancel() }
+        inFlightTasks = [:]
+        urlCache.removeAllCachedResponses()
+    }
+
+    func sizeBytes() -> Int {
+        totalBytes + urlCache.currentDiskUsage
     }
 
     func data(
