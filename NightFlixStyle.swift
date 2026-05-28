@@ -32,6 +32,7 @@ enum AppAnimationMode: String, CaseIterable, Identifiable, Codable {
 final class AppSettingsManager: ObservableObject {
     @AppStorage("appAppearance") var appearanceRawValue: String = AppAppearance.auto.rawValue
     @AppStorage("appAnimationMode") var animationModeRawValue: String = AppAnimationMode.total.rawValue
+    @AppStorage("skipIntroAnimation") private var skipIntroAnimationStorage = false
 
     var appearance: AppAppearance {
         get {
@@ -50,6 +51,16 @@ final class AppSettingsManager: ObservableObject {
         set {
             objectWillChange.send()
             animationModeRawValue = newValue.rawValue
+        }
+    }
+
+    var skipIntroAnimation: Bool {
+        get {
+            skipIntroAnimationStorage
+        }
+        set {
+            objectWillChange.send()
+            skipIntroAnimationStorage = newValue
         }
     }
 

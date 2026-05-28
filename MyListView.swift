@@ -25,7 +25,7 @@ struct MyListView: View {
             } else {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 18) {
-                        Text("My List")
+                        Text("Watch Later")
                             .font(.largeTitle.weight(.black))
                             .foregroundStyle(NightFlixStyle.primaryTextColor)
                             .accessibilityAddTraits(.isHeader)
@@ -55,7 +55,7 @@ struct MyListView: View {
                 }
             }
         }
-        .navigationTitle("My List")
+        .navigationTitle("Watch Later")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $selectedDetailItem) { item in
             MediaDetailView(
@@ -80,16 +80,16 @@ struct MyListView: View {
 
     private var emptyState: some View {
         VStack(spacing: 14) {
-            Image(systemName: "bookmark.fill")
+            Image(systemName: "clock.fill")
                 .font(.system(size: 46, weight: .bold))
                 .foregroundStyle(NightFlixStyle.accentColor)
 
-            Text("Your list is empty")
+            Text("Watch Later is empty")
                 .font(.title2.weight(.black))
                 .foregroundStyle(NightFlixStyle.primaryTextColor)
                 .multilineTextAlignment(.center)
 
-            Text("Add movies and series from their detail pages.")
+            Text("Save movies and series from their detail pages to watch later.")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(NightFlixStyle.secondaryTextColor)
                 .multilineTextAlignment(.center)

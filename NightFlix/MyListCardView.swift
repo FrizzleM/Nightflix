@@ -63,7 +63,7 @@ struct MyListCardView: View {
             }
             .buttonStyle(.plain)
             .padding(16)
-            .accessibilityLabel("Remove \(item.title) from My List")
+            .accessibilityLabel("Remove \(item.title) from Watch Later")
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }

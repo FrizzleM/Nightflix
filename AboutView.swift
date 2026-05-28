@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import SwiftUI
 
 struct AboutView: View {
@@ -7,7 +8,6 @@ struct AboutView: View {
     let animationTrigger: Int
     let showNightflixTitle: Bool
     let shouldAnimateNightflixTitle: Bool
-    let onHistoryDeleted: () -> Void
 
     @EnvironmentObject private var settings: AppSettingsManager
     @Environment(\.openURL) private var openURL
@@ -177,8 +177,7 @@ struct AboutView: View {
         NavigationLink {
             SettingsView(
                 historyManager: historyManager,
-                continueWatchingManager: continueWatchingManager,
-                onHistoryDeleted: onHistoryDeleted
+                continueWatchingManager: continueWatchingManager
             )
         } label: {
             HStack(spacing: 14) {
@@ -228,13 +227,13 @@ struct AboutView: View {
 struct SettingsView: View {
     let historyManager: WatchHistoryManager
     let continueWatchingManager: ContinueWatchingManager
-    let onHistoryDeleted: () -> Void
 
     @EnvironmentObject private var settings: AppSettingsManager
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
     @State private var isShowingDeleteHistoryConfirmation = false
     @State private var isShowingDeleteCacheConfirmation = false
     @State private var cacheSizeBytes = 0
+    @State private var shutdownCountdown: Int?
 
     var body: some View {
         ZStack {
@@ -254,6 +253,12 @@ struct SettingsView: View {
                 .padding(.top, 20)
                 .padding(.bottom, 130)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if let shutdownCountdown {
+                shutdownCountdownOverlay(secondsRemaining: shutdownCountdown)
+                    .transition(.opacity)
+                    .zIndex(10)
             }
         }
         .navigationTitle("Settings")
@@ -279,6 +284,87 @@ struct SettingsView: View {
             Text("This will remove cached TMDB data from this device. It will be downloaded again when needed.")
         }
         .tint(NightFlixStyle.accentColor)
+    }
+
+    private func shutdownCountdownOverlay(secondsRemaining: Int) -> some View {
+        ZStack {
+            Color.black.opacity(0.38)
+                .ignoresSafeArea()
+                .background(.ultraThinMaterial)
+
+            VStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(NightFlixStyle.accentColor.opacity(0.22))
+                        .frame(width: 86, height: 86)
+                        .blur(radius: 22)
+
+                    Image(systemName: "power")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundStyle(NightFlixStyle.accentColor)
+                        .frame(width: 58, height: 58)
+                        .background(.white.opacity(0.10), in: Circle())
+                        .overlay {
+                            Circle()
+                                .stroke(.white.opacity(0.24), lineWidth: 1)
+                        }
+                }
+
+                Text("Nightflix will close")
+                    .font(.title3.weight(.black))
+                    .foregroundStyle(.white)
+
+                Text("\(secondsRemaining)")
+                    .font(.system(size: 56, weight: .black, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.white, .white.opacity(0.72)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .shadow(color: NightFlixStyle.accentColor.opacity(0.35), radius: 18)
+
+                Text("Reopen the app from your Home Screen.")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.72))
+                    .multilineTextAlignment(.center)
+            }
+            .padding(26)
+            .frame(maxWidth: 320)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                .white.opacity(0.48),
+                                .white.opacity(0.16),
+                                NightFlixStyle.accentColor.opacity(0.26)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+            .overlay(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [.white.opacity(0.24), .clear],
+                            startPoint: .topLeading,
+                            endPoint: .center
+                        )
+                    )
+                    .frame(height: 120)
+                    .allowsHitTesting(false)
+            }
+            .shadow(color: .black.opacity(0.35), radius: 28, y: 18)
+            .padding(24)
+        }
     }
 
     private var appearanceSection: some View {
@@ -322,6 +408,11 @@ struct SettingsView: View {
                 }
             }
             .pickerStyle(.segmented)
+
+            Toggle("Skip intro animation", isOn: skipIntroAnimationBinding)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(NightFlixStyle.primaryTextColor)
+                .tint(NightFlixStyle.accentColor)
         }
         .padding(16)
         .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -353,6 +444,17 @@ struct SettingsView: View {
         )
     }
 
+    private var skipIntroAnimationBinding: Binding<Bool> {
+        Binding(
+            get: { settings.skipIntroAnimation },
+            set: { newValue in
+                guard settings.skipIntroAnimation != newValue else { return }
+                HapticManager.shared.selection()
+                settings.skipIntroAnimation = newValue
+            }
+        )
+    }
+
     private var hapticsBinding: Binding<Bool> {
         Binding(
             get: { hapticsEnabled },
@@ -372,6 +474,7 @@ struct SettingsView: View {
 
     private var deleteHistoryButton: some View {
         Button(role: .destructive) {
+            guard shutdownCountdown == nil else { return }
             HapticManager.shared.warning()
             isShowingDeleteHistoryConfirmation = true
         } label: {
@@ -382,10 +485,12 @@ struct SettingsView: View {
         }
         .buttonStyle(.plain)
         .controlSize(.large)
+        .disabled(shutdownCountdown != nil)
     }
 
     private var deleteCacheButton: some View {
         Button(role: .destructive) {
+            guard shutdownCountdown == nil else { return }
             HapticManager.shared.warning()
             isShowingDeleteCacheConfirmation = true
         } label: {
@@ -396,6 +501,7 @@ struct SettingsView: View {
         }
         .buttonStyle(.plain)
         .controlSize(.large)
+        .disabled(shutdownCountdown != nil)
     }
 
     private func destructiveButtonLabel(title: String, accessibilityHint: String) -> some View {
@@ -424,7 +530,7 @@ struct SettingsView: View {
         historyManager.clear()
         continueWatchingManager.clear()
         HapticManager.shared.success()
-        onHistoryDeleted()
+        terminateApp()
     }
 
     private func deleteCache() {
@@ -435,7 +541,24 @@ struct SettingsView: View {
             await MainActor.run {
                 self.cacheSizeBytes = cacheSizeBytes
                 HapticManager.shared.success()
+                terminateApp()
             }
+        }
+    }
+
+    private func terminateApp() {
+        guard shutdownCountdown == nil else { return }
+        UserDefaults.standard.synchronize()
+        shutdownCountdown = 3
+
+        Task { @MainActor in
+            for secondsRemaining in stride(from: 2, through: 1, by: -1) {
+                try? await Task.sleep(for: .seconds(1))
+                shutdownCountdown = secondsRemaining
+            }
+
+            try? await Task.sleep(for: .seconds(1))
+            exit(0)
         }
     }
 
@@ -465,8 +588,7 @@ struct SettingsView: View {
         continueWatchingManager: ContinueWatchingManager(),
         animationTrigger: 0,
         showNightflixTitle: true,
-        shouldAnimateNightflixTitle: false,
-        onHistoryDeleted: { }
+        shouldAnimateNightflixTitle: false
     )
-        .environmentObject(AppSettingsManager())
+    .environmentObject(AppSettingsManager())
 }

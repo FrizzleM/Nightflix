@@ -49,14 +49,14 @@ struct HomeStickyHeaderView: View {
             .animation(searchShortcutAnimation, value: showSearchShortcut)
 
             Rectangle()
-                .fill(Color.white.opacity(0.08 * backgroundProgress))
+                .fill(headerDividerColor)
                 .frame(height: 1)
         }
         .frame(maxWidth: .infinity, alignment: .top)
         .background(alignment: .top) {
             headerBackground
         }
-        .shadow(color: .black.opacity(0.3 * backgroundProgress), radius: 18, y: 10)
+        .shadow(color: headerShadowColor, radius: 18, y: 10)
         .onAppear {
             updateTitleGlowVisibility(for: backgroundProgress, animated: false)
         }
@@ -103,24 +103,32 @@ struct HomeStickyHeaderView: View {
         .accessibilityLabel("Back to search")
     }
 
+    @ViewBuilder
     private var headerBackground: some View {
-        ZStack(alignment: .bottom) {
-            Color.black
-                .opacity(0.92 * backgroundProgress)
+        if colorScheme == .dark {
+            ZStack(alignment: .bottom) {
+                Color.black
+                    .opacity(0.92 * backgroundProgress)
 
-            LinearGradient(
-                colors: [
-                    Color.black.opacity(0.98),
-                    Color.black.opacity(0.94),
-                    Color.black.opacity(0.82)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .opacity(backgroundProgress)
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0.98),
+                        Color.black.opacity(0.94),
+                        Color.black.opacity(0.82)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .opacity(backgroundProgress)
+            }
+            .frame(height: max(topSafeArea, 0) + headerContentHeight + 1)
+            .ignoresSafeArea(edges: .top)
+        } else {
+            Color.white
+                .opacity(backgroundProgress)
+                .frame(height: max(topSafeArea, 0) + headerContentHeight + 1)
+                .ignoresSafeArea(edges: .top)
         }
-        .frame(height: max(topSafeArea, 0) + headerContentHeight + 1)
-        .ignoresSafeArea(edges: .top)
     }
 
     private var backgroundProgress: CGFloat {
@@ -140,11 +148,24 @@ struct HomeStickyHeaderView: View {
     }
 
     private var menuForegroundColor: Color {
-        if colorScheme == .dark || backgroundProgress > 0.35 {
+        if colorScheme == .dark {
             return .white
         }
 
         return NightFlixStyle.primaryTextColor
+    }
+
+    private var headerDividerColor: Color {
+        if colorScheme == .dark {
+            return Color.white.opacity(0.08 * backgroundProgress)
+        }
+
+        return Color.black.opacity(0.22 * backgroundProgress)
+    }
+
+    private var headerShadowColor: Color {
+        let opacity = colorScheme == .dark ? 0.3 : 0.08
+        return .black.opacity(opacity * backgroundProgress)
     }
 
     private var titleGlowOpacity: CGFloat {

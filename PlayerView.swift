@@ -15,6 +15,9 @@ struct PlayerView: View {
             WebView(url: item.generatedURL, isLoading: $isLoading, errorMessage: $errorMessage)
                 .ignoresSafeArea(edges: .bottom)
 
+            closeButton
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
             if isLoading {
                 ProgressView()
                     .progressViewStyle(.circular)
@@ -55,16 +58,35 @@ struct PlayerView: View {
                 .padding()
             }
         }
-        .navigationTitle(item.title)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.black, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
         .onChange(of: errorMessage) { _, newValue in
             if newValue != nil {
                 HapticManager.shared.error()
             }
         }
+    }
+
+    private var closeButton: some View {
+        Button {
+            HapticManager.shared.lightImpact()
+            dismiss()
+        } label: {
+            Image(systemName: "chevron.left")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 42, height: 42)
+                .background(.black.opacity(0.64), in: Circle())
+                .overlay {
+                    Circle()
+                        .stroke(.white.opacity(0.16), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.34), radius: 12, y: 6)
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 12)
+        .padding(.leading, 12)
+        .accessibilityLabel("Close player")
     }
 }
 

@@ -61,6 +61,7 @@ final class FeedViewModel {
         popularSeries = await popularSeriesTask
         topRatedMovies = await topRatedMoviesTask
         topRatedSeries = await topRatedSeriesTask
+        prefetchStartupImages()
     }
 
     private func loadTrending() async -> (section: FeedSection, featuredHeroItem: MediaItem?) {
@@ -151,5 +152,54 @@ final class FeedViewModel {
         }
 
         return mediaItems.first { $0.backdropPath != nil } ?? mediaItems.first
+    }
+
+    private func prefetchStartupImages() {
+        let urls = startupImageURLs()
+        guard !urls.isEmpty else { return }
+
+        Task.detached(priority: .utility) {
+            await StartupImagePrefetcher.prefetch(urls)
+        }
+    }
+
+    private func startupImageURLs() -> [URL] {
+        var urls: [URL] = []
+        var seenURLs = Set<URL>()
+
+        func append(_ url: URL?) {
+            guard let url, seenURLs.insert(url).inserted else { return }
+            urls.append(url)
+        }
+
+        append(featuredHeroItem?.backdropURL ?? featuredHeroItem?.posterURL)
+
+        for item in trending.items.prefix(6) {
+            append(item.posterURL)
+        }
+
+        for section in [popularMovies, popularSeries, topRatedMovies, topRatedSeries] {
+            for item in section.items.prefix(2) {
+                append(item.posterURL)
+            }
+        }
+
+        return urls
+    }
+}
+
+private enum StartupImagePrefetcher {
+    static func prefetch(_ urls: [URL]) async {
+        await withTaskGroup(of: Void.self) { group in
+            for url in urls {
+                group.addTask {
+                    var request = URLRequest(url: url)
+                    request.cachePolicy = .returnCacheDataElseLoad
+                    request.timeoutInterval = 15
+
+                    _ = try? await URLSession.shared.data(for: request)
+                }
+            }
+        }
     }
 }

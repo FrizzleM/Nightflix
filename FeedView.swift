@@ -11,9 +11,9 @@ struct FeedView: View {
     let animationTrigger: Int
     let showNightflixTitle: Bool
     let shouldAnimateNightflixTitle: Bool
+    let startupContentAnimationReady: Bool
     @Binding var selectedHomeMenuDestination: HomeMenuDestination?
     let onOpenHomeMenu: () -> Void
-    let onHistoryDeleted: () -> Void
 
     @EnvironmentObject private var settings: AppSettingsManager
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -149,14 +149,18 @@ struct FeedView: View {
                 case .settings:
                     SettingsView(
                         historyManager: historyManager,
-                        continueWatchingManager: continueWatchingManager,
-                        onHistoryDeleted: onHistoryDeleted
+                        continueWatchingManager: continueWatchingManager
                     )
                 }
             }
         }
         .onAppear {
             prepareStartupContentAnimation()
+        }
+        .onChange(of: startupContentAnimationReady) { _, isReady in
+            if isReady {
+                prepareStartupContentAnimation()
+            }
         }
         .onChange(of: animationTrigger) { _, _ in
             replayHomeContentAnimationIfNeeded()
@@ -460,13 +464,17 @@ struct FeedView: View {
             return
         }
 
-        hasHandledStartupContentAnimation = true
-
         guard contentAnimationsEnabled else {
+            hasHandledStartupContentAnimation = true
             keepContentVisible()
             return
         }
 
+        guard startupContentAnimationReady else {
+            return
+        }
+
+        hasHandledStartupContentAnimation = true
         replayHomeContentAnimation()
     }
 
@@ -604,8 +612,8 @@ private extension View {
         animationTrigger: 0,
         showNightflixTitle: true,
         shouldAnimateNightflixTitle: false,
+        startupContentAnimationReady: true,
         selectedHomeMenuDestination: .constant(nil),
-        onOpenHomeMenu: { },
-        onHistoryDeleted: { }
+        onOpenHomeMenu: { }
     )
 }

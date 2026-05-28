@@ -201,10 +201,10 @@ struct MediaDetailView: View {
             genreSection(tv.genres)
             trailerButton(title: tv.name, url: preferredTrailerURL(from: tv.videos?.results ?? []))
             myListButton(MyListItem(tv: tv))
-            castSection(tv.credits?.cast ?? [])
-            peopleSection(title: "Created By", names: tv.createdBy.map(\.name))
             seasonsSection(tv)
             episodesSection(tv)
+            castSection(tv.credits?.cast ?? [])
+            peopleSection(title: "Created By", names: tv.createdBy.map(\.name))
             recommendationSection(title: "Similar Series", items: tv.similar?.results ?? [], mediaType: "tv")
             recommendationSection(title: "Recommended Series", items: tv.recommendations?.results ?? [], mediaType: "tv")
         }
@@ -276,7 +276,7 @@ struct MediaDetailView: View {
             HapticManager.shared.lightImpact()
             myListManager.toggle(item)
         } label: {
-            Label(isSaved ? "In My List" : "Add to My List", systemImage: isSaved ? "bookmark.fill" : "plus")
+            Label(isSaved ? "In Watch Later" : "Add to Watch Later", systemImage: "clock.fill")
                 .font(.headline.weight(.bold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
@@ -291,7 +291,7 @@ struct MediaDetailView: View {
                 }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(isSaved ? "Remove \(item.title) from My List" : "Add \(item.title) to My List")
+        .accessibilityLabel(isSaved ? "Remove \(item.title) from Watch Later" : "Add \(item.title) to Watch Later")
     }
 
     @ViewBuilder
