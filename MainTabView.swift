@@ -6,6 +6,8 @@ struct MainTabView: View {
         case about
     }
 
+    let playsStartupIntro: Bool
+
     @State private var historyManager = WatchHistoryManager()
     @State private var continueWatchingManager = ContinueWatchingManager()
     @State private var selectedTab: AppTab = .home
@@ -23,6 +25,10 @@ struct MainTabView: View {
     @EnvironmentObject private var settings: AppSettingsManager
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
+
+    init(playsStartupIntro: Bool = true) {
+        self.playsStartupIntro = playsStartupIntro
+    }
 
     var body: some View {
         ZStack {
@@ -116,7 +122,7 @@ struct MainTabView: View {
     }
 
     private var shouldShowStartupIntro: Bool {
-        startupAnimationsEnabled && !settings.skipIntroAnimation
+        playsStartupIntro && startupAnimationsEnabled && !settings.skipIntroAnimation
     }
 
     private func startStartupAnimationIfNeeded() {
@@ -287,7 +293,7 @@ struct MainTabView: View {
     }
 }
 
-private struct NightflixStartupAnimationView: View {
+struct NightflixStartupAnimationView: View {
     let animationsEnabled: Bool
     let onFinished: @MainActor () -> Void
 

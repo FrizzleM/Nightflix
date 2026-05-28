@@ -296,12 +296,12 @@ struct SeriesDetailView: View {
     private func play(_ episode: Episode) {
         playErrorMessage = nil
 
-        guard let url = VidkingURLBuilder.tvURL(
+        guard let url = StreamingProviderURLBuilder.tvURL(
             tmdbId: seriesId,
             season: episode.seasonNumber,
             episode: episode.episodeNumber
         ) else {
-            playErrorMessage = "The TV episode player URL could not be created."
+            playErrorMessage = StreamingProviderURLBuilder.configurationErrorMessage
             HapticManager.shared.error()
             return
         }
@@ -322,6 +322,9 @@ struct SeriesDetailView: View {
                 type: .tv,
                 title: seriesTitle,
                 tmdbId: String(seriesId),
+                season: episode.seasonNumber,
+                episode: episode.episodeNumber,
+                episodeName: episode.name,
                 posterPath: posterPath,
                 playableURL: url
             )

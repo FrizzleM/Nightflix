@@ -42,6 +42,27 @@ struct PlayerView: View {
                         .foregroundStyle(.white.opacity(0.72))
                         .multilineTextAlignment(.center)
 
+                    VStack(spacing: 5) {
+                        Text("Tried opening")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.white.opacity(0.58))
+
+                        Text(item.generatedURL.absoluteString)
+                            .font(.caption2.monospaced())
+                            .foregroundStyle(.white.opacity(0.72))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(4)
+                            .textSelection(.enabled)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
+                    .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(.white.opacity(0.14), lineWidth: 1)
+                    }
+
                     Button("Close") {
                         HapticManager.shared.lightImpact()
                         dismiss()
@@ -53,7 +74,7 @@ struct PlayerView: View {
                     .background(NightFlixStyle.accentColor, in: Capsule())
                 }
                 .padding(22)
-                .frame(maxWidth: 340)
+                .frame(maxWidth: 380)
                 .background(.black.opacity(0.88), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .padding()
             }
@@ -97,7 +118,7 @@ struct PlayerView: View {
                 type: .movie,
                 title: "Sample Movie",
                 tmdbId: "1078605",
-                generatedURL: URL(string: "https://www.vidking.net/embed/movie/1078605?color=e50914&autoPlay=true&nextEpisode=true&episodeSelector=true")!
+                generatedURL: URL(string: "https://example.com/embed/movie/1078605?color=e50914&autoPlay=true&nextEpisode=true&episodeSelector=true")!
             )
         )
     }

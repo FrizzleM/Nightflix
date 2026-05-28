@@ -232,6 +232,7 @@ struct SettingsView: View {
     @AppStorage("hapticsEnabled") private var hapticsEnabled = true
     @State private var isShowingDeleteHistoryConfirmation = false
     @State private var isShowingDeleteCacheConfirmation = false
+    @State private var isShowingDeleteKeysConfirmation = false
     @State private var cacheSizeBytes = 0
     @State private var shutdownCountdown: Int?
 
@@ -241,12 +242,14 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                    connectionSection
                     appearanceSection
                     animationsSection
 
                     VStack(spacing: 12) {
                         deleteHistoryButton
                         deleteCacheButton
+                        deleteKeysButton
                     }
                 }
                 .padding(.horizontal, 20)
@@ -282,6 +285,14 @@ struct SettingsView: View {
             }
         } message: {
             Text("This will remove cached TMDB data from this device. It will be downloaded again when needed.")
+        }
+        .alert("Delete keys?", isPresented: $isShowingDeleteKeysConfirmation) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete Keys", role: .destructive) {
+                deleteKeys()
+            }
+        } message: {
+            Text("This will remove your TMDB Read Access Token and movie provider from this device. Nightflix will ask for setup again when reopened.")
         }
         .tint(NightFlixStyle.accentColor)
     }
@@ -396,6 +407,55 @@ struct SettingsView: View {
         }
     }
 
+    private var connectionSection: some View {
+        NavigationLink {
+            ConnectionSettingsView()
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(NightFlixStyle.accentColor.opacity(0.12))
+                        .frame(width: 46, height: 46)
+
+                    Image(systemName: "key.fill")
+                        .font(.title3.weight(.black))
+                        .foregroundStyle(NightFlixStyle.accentColor)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("TMDB and Player")
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(NightFlixStyle.primaryTextColor)
+
+                    Text("Edit your Read Access Token and movie provider")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(NightFlixStyle.secondaryTextColor)
+                        .lineLimit(2)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.headline.weight(.black))
+                    .foregroundStyle(NightFlixStyle.accentColor)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(NightFlixStyle.borderColor, lineWidth: 1)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                HapticManager.shared.lightImpact()
+            }
+        )
+    }
+
     private var animationsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Animations")
@@ -478,8 +538,9 @@ struct SettingsView: View {
             HapticManager.shared.warning()
             isShowingDeleteHistoryConfirmation = true
         } label: {
-            destructiveButtonLabel(
+            settingsOutlineButtonLabel(
                 title: "Delete History",
+                systemImage: "trash.fill",
                 accessibilityHint: "Deletes Continue Watching and saved watch history from this device."
             )
         }
@@ -494,8 +555,9 @@ struct SettingsView: View {
             HapticManager.shared.warning()
             isShowingDeleteCacheConfirmation = true
         } label: {
-            destructiveButtonLabel(
+            settingsOutlineButtonLabel(
                 title: "Delete Cache (\(cacheSizeText))",
+                systemImage: "trash.fill",
                 accessibilityHint: "Deletes cached TMDB data from this device."
             )
         }
@@ -504,26 +566,21 @@ struct SettingsView: View {
         .disabled(shutdownCountdown != nil)
     }
 
-    private func destructiveButtonLabel(title: String, accessibilityHint: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "trash.fill")
-                .font(.headline.weight(.bold))
-
-            Text(title)
-                .font(.headline.weight(.bold))
+    private var deleteKeysButton: some View {
+        Button(role: .destructive) {
+            guard shutdownCountdown == nil else { return }
+            HapticManager.shared.warning()
+            isShowingDeleteKeysConfirmation = true
+        } label: {
+            settingsOutlineButtonLabel(
+                title: "Delete Keys",
+                systemImage: "trash.fill",
+                accessibilityHint: "Deletes setup keys from this device and asks for setup again."
+            )
         }
-        .foregroundStyle(NightFlixStyle.accentColor)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 15)
-        .padding(.horizontal, 18)
-        .background(NightFlixStyle.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(NightFlixStyle.accentColor.opacity(0.78), lineWidth: 1)
-        }
-        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .hoverEffect(.highlight)
-        .accessibilityHint(accessibilityHint)
+        .buttonStyle(.plain)
+        .controlSize(.large)
+        .disabled(shutdownCountdown != nil)
     }
 
     private func deleteHistory() {
@@ -544,6 +601,12 @@ struct SettingsView: View {
                 terminateApp()
             }
         }
+    }
+
+    private func deleteKeys() {
+        settings.resetInitialSetupCredentials()
+        HapticManager.shared.success()
+        terminateApp()
     }
 
     private func terminateApp() {
@@ -580,6 +643,194 @@ struct SettingsView: View {
             }
         }
     }
+}
+
+private struct ConnectionSettingsView: View {
+    @EnvironmentObject private var settings: AppSettingsManager
+    @Environment(\.openURL) private var openURL
+
+    @State private var tmdbCredentialDraft = ""
+    @State private var providerBaseURLDraft = ""
+    @State private var statusMessage: String?
+    @State private var isStatusError = false
+    @State private var statusDismissTask: Task<Void, Never>?
+
+    var body: some View {
+        ZStack {
+            NightFlixStyle.backgroundColor.ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    credentialSection
+
+                    if let statusMessage {
+                        Label(
+                            statusMessage,
+                            systemImage: isStatusError ? "exclamationmark.circle.fill" : "checkmark.circle.fill"
+                        )
+                        .font(.footnote.weight(.bold))
+                        .foregroundStyle(isStatusError ? NightFlixStyle.accentColor : NightFlixStyle.secondaryTextColor)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+
+                    Button {
+                        saveConnectionSettings()
+                    } label: {
+                        settingsOutlineButtonLabel(
+                            title: "Save Setup Details",
+                            systemImage: "checkmark",
+                            accessibilityHint: "Saves your TMDB Read Access Token and movie provider."
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .controlSize(.large)
+                    .disabled(!canSaveConnectionSettings)
+                    .opacity(canSaveConnectionSettings ? 1 : 0.45)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 130)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .navigationTitle("TMDB and Player")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
+        .tint(NightFlixStyle.accentColor)
+        .onAppear {
+            syncConnectionDrafts()
+        }
+        .onDisappear {
+            statusDismissTask?.cancel()
+        }
+    }
+
+    private var credentialSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("TMDB Read Access Token")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(NightFlixStyle.secondaryTextColor)
+
+                SecureField("Read Access Token", text: $tmdbCredentialDraft)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.asciiCapable)
+                    .nightFlixInputFieldStyle()
+
+                Button {
+                    openTMDBAPIPage()
+                } label: {
+                    Label("Create a TMDB account", systemImage: "arrow.up.right")
+                        .font(.footnote.weight(.bold))
+                        .foregroundStyle(NightFlixStyle.accentColor)
+                }
+                .buttonStyle(.plain)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Movie Provider URL")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(NightFlixStyle.secondaryTextColor)
+
+                TextField("https://example.com", text: $providerBaseURLDraft)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.URL)
+                    .nightFlixInputFieldStyle()
+            }
+        }
+        .padding(16)
+        .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(NightFlixStyle.borderColor, lineWidth: 1)
+        }
+    }
+
+    private var canSaveConnectionSettings: Bool {
+        NightFlixUserConfiguration.isValidTMDBReadAccessToken(tmdbCredentialDraft)
+    }
+
+    private func syncConnectionDrafts() {
+        tmdbCredentialDraft = settings.tmdbCredential
+        providerBaseURLDraft = settings.streamingProviderBaseURL
+    }
+
+    private func saveConnectionSettings() {
+        let normalizedTMDBCredential = NightFlixUserConfiguration.normalizedTMDBCredential(from: tmdbCredentialDraft)
+
+        guard NightFlixUserConfiguration.isValidTMDBReadAccessToken(normalizedTMDBCredential) else {
+            showTemporaryStatus("Add a TMDB Read Access Token before saving.", isError: true)
+            HapticManager.shared.error()
+            return
+        }
+
+        let normalizedProviderURL = NightFlixUserConfiguration.normalizedStreamingProviderBaseURL(from: providerBaseURLDraft)
+        settings.tmdbCredential = normalizedTMDBCredential
+        settings.streamingProviderBaseURL = normalizedProviderURL
+
+        tmdbCredentialDraft = normalizedTMDBCredential
+        providerBaseURLDraft = normalizedProviderURL
+        showTemporaryStatus(
+            normalizedProviderURL.isEmpty
+                ? "TMDB saved. Add a movie provider when you're ready to play."
+                : "Setup details saved.",
+            isError: false
+        )
+        HapticManager.shared.success()
+    }
+
+    private func showTemporaryStatus(_ message: String, isError: Bool) {
+        statusDismissTask?.cancel()
+        isStatusError = isError
+
+        withAnimation(.easeIn(duration: 0.18)) {
+            statusMessage = message
+        }
+
+        statusDismissTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(isError ? 2.4 : 1.8))
+            guard !Task.isCancelled else { return }
+
+            withAnimation(.easeOut(duration: 0.28)) {
+                statusMessage = nil
+            }
+        }
+    }
+
+    private func openTMDBAPIPage() {
+        guard let url = URL(string: "https://www.themoviedb.org/signup") else { return }
+        HapticManager.shared.lightImpact()
+        openURL(url)
+    }
+}
+
+private func settingsOutlineButtonLabel(
+    title: String,
+    systemImage: String,
+    accessibilityHint: String
+) -> some View {
+    HStack(spacing: 10) {
+        Image(systemName: systemImage)
+            .font(.headline.weight(.bold))
+
+        Text(title)
+            .font(.headline.weight(.bold))
+    }
+    .foregroundStyle(NightFlixStyle.accentColor)
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 15)
+    .padding(.horizontal, 18)
+    .background(NightFlixStyle.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    .overlay {
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .stroke(NightFlixStyle.accentColor.opacity(0.78), lineWidth: 1)
+    }
+    .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    .hoverEffect(.highlight)
+    .accessibilityHint(accessibilityHint)
 }
 
 #Preview {

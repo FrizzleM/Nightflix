@@ -528,24 +528,11 @@ struct FeedView: View {
     private func playContinueWatching(_ item: ContinueWatchingItem) {
         playErrorMessage = nil
 
-        if let playableURL = item.playableURL {
-            let watchItem = WatchItem(
-                type: item.type,
-                title: item.title,
-                tmdbId: item.tmdbId,
-                posterPath: item.posterPath,
-                generatedURL: playableURL
-            )
-            historyManager.add(watchItem)
-            selectedItem = watchItem
-            return
-        }
-
         switch item.type {
         case .movie:
             guard let tmdbId = item.tmdbIntId,
-                  let url = VidkingURLBuilder.movieURL(tmdbId: tmdbId) else {
-                playErrorMessage = "The movie player URL could not be created."
+                  let url = StreamingProviderURLBuilder.movieURL(tmdbId: tmdbId) else {
+                playErrorMessage = StreamingProviderURLBuilder.configurationErrorMessage
                 HapticManager.shared.error()
                 return
             }
@@ -564,6 +551,32 @@ struct FeedView: View {
             guard let tmdbId = item.tmdbIntId else {
                 playErrorMessage = "The series details could not be opened."
                 HapticManager.shared.error()
+                return
+            }
+
+            if let season = item.season, let episode = item.episode {
+                guard let url = StreamingProviderURLBuilder.tvURL(
+                    tmdbId: tmdbId,
+                    season: season,
+                    episode: episode
+                ) else {
+                    playErrorMessage = StreamingProviderURLBuilder.configurationErrorMessage
+                    HapticManager.shared.error()
+                    return
+                }
+
+                let watchItem = WatchItem(
+                    type: .tv,
+                    title: item.title,
+                    tmdbId: item.tmdbId,
+                    season: season,
+                    episode: episode,
+                    episodeName: item.episodeName,
+                    posterPath: item.posterPath,
+                    generatedURL: url
+                )
+                historyManager.add(watchItem)
+                selectedItem = watchItem
                 return
             }
 

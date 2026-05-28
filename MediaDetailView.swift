@@ -691,8 +691,8 @@ struct MediaDetailView: View {
         playErrorMessage = nil
         HapticManager.shared.mediumImpact()
 
-        guard let url = VidkingURLBuilder.movieURL(tmdbId: movie.id) else {
-            playErrorMessage = "The movie player URL could not be created."
+        guard let url = StreamingProviderURLBuilder.movieURL(tmdbId: movie.id) else {
+            playErrorMessage = StreamingProviderURLBuilder.configurationErrorMessage
             HapticManager.shared.error()
             return
         }
@@ -721,12 +721,12 @@ struct MediaDetailView: View {
         playErrorMessage = nil
         HapticManager.shared.mediumImpact()
 
-        guard let url = VidkingURLBuilder.tvURL(
+        guard let url = StreamingProviderURLBuilder.tvURL(
             tmdbId: tv.id,
             season: episode.seasonNumber,
             episode: episode.episodeNumber
         ) else {
-            playErrorMessage = "The TV episode player URL could not be created."
+            playErrorMessage = StreamingProviderURLBuilder.configurationErrorMessage
             HapticManager.shared.error()
             return
         }
@@ -747,6 +747,9 @@ struct MediaDetailView: View {
                 type: .tv,
                 title: tv.name,
                 tmdbId: String(tv.id),
+                season: episode.seasonNumber,
+                episode: episode.episodeNumber,
+                episodeName: episode.name,
                 posterPath: tv.posterPath,
                 playableURL: url
             )

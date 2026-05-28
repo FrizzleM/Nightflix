@@ -29,10 +29,57 @@ enum AppAnimationMode: String, CaseIterable, Identifiable, Codable {
     var id: String { rawValue }
 }
 
+enum AppSettingsStorageKey {
+    static let appAppearance = "appAppearance"
+    static let appAnimationMode = "appAnimationMode"
+    static let skipIntroAnimation = "skipIntroAnimation"
+    static let hasCompletedInitialSetup = "hasCompletedInitialSetup"
+    static let tmdbCredential = "tmdbCredential"
+    static let streamingProviderBaseURL = "streamingProviderBaseURL"
+}
+
+enum NightFlixUserConfiguration {
+    static func normalizedTMDBCredential(from rawValue: String) -> String {
+        var trimmedValue = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if trimmedValue.hasCaseInsensitivePrefix("Bearer ") {
+            trimmedValue = String(trimmedValue.dropFirst("Bearer ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        return trimmedValue
+    }
+
+    static func isValidTMDBReadAccessToken(_ rawValue: String) -> Bool {
+        normalizedTMDBCredential(from: rawValue)
+            .split(separator: ".")
+            .count == 3
+    }
+
+    static func normalizedStreamingProviderBaseURL(from rawValue: String) -> String {
+        let trimmedValue = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedValue.isEmpty else { return "" }
+
+        let valueWithScheme: String
+        if trimmedValue.hasCaseInsensitivePrefix("http://") {
+            valueWithScheme = "https://\(trimmedValue.dropFirst("http://".count))"
+        } else if trimmedValue.range(of: "://") == nil {
+            valueWithScheme = "https://\(trimmedValue)"
+        } else {
+            valueWithScheme = trimmedValue
+        }
+
+        return valueWithScheme.trimmingTrailingSlashes()
+    }
+}
+
 final class AppSettingsManager: ObservableObject {
-    @AppStorage("appAppearance") var appearanceRawValue: String = AppAppearance.auto.rawValue
-    @AppStorage("appAnimationMode") var animationModeRawValue: String = AppAnimationMode.total.rawValue
-    @AppStorage("skipIntroAnimation") private var skipIntroAnimationStorage = false
+    @AppStorage(AppSettingsStorageKey.appAppearance) var appearanceRawValue: String = AppAppearance.auto.rawValue
+    @AppStorage(AppSettingsStorageKey.appAnimationMode) var animationModeRawValue: String = AppAnimationMode.total.rawValue
+    @AppStorage(AppSettingsStorageKey.skipIntroAnimation) private var skipIntroAnimationStorage = false
+    @AppStorage(AppSettingsStorageKey.hasCompletedInitialSetup) private var hasCompletedInitialSetupStorage = false
+    @AppStorage(AppSettingsStorageKey.tmdbCredential) private var tmdbCredentialStorage = ""
+    @AppStorage(AppSettingsStorageKey.streamingProviderBaseURL) private var streamingProviderBaseURLStorage = ""
 
     var appearance: AppAppearance {
         get {
@@ -64,8 +111,59 @@ final class AppSettingsManager: ObservableObject {
         }
     }
 
+    var hasCompletedInitialSetup: Bool {
+        get {
+            hasCompletedInitialSetupStorage
+        }
+        set {
+            objectWillChange.send()
+            hasCompletedInitialSetupStorage = newValue
+        }
+    }
+
+    var tmdbCredential: String {
+        get {
+            NightFlixUserConfiguration.normalizedTMDBCredential(from: tmdbCredentialStorage)
+        }
+        set {
+            objectWillChange.send()
+            tmdbCredentialStorage = NightFlixUserConfiguration.normalizedTMDBCredential(from: newValue)
+        }
+    }
+
+    var streamingProviderBaseURL: String {
+        get {
+            NightFlixUserConfiguration.normalizedStreamingProviderBaseURL(from: streamingProviderBaseURLStorage)
+        }
+        set {
+            objectWillChange.send()
+            streamingProviderBaseURLStorage = NightFlixUserConfiguration.normalizedStreamingProviderBaseURL(from: newValue)
+        }
+    }
+
+    var hasConfiguredTMDBCredential: Bool {
+        NightFlixUserConfiguration.isValidTMDBReadAccessToken(tmdbCredential)
+    }
+
+    var hasConfiguredStreamingProvider: Bool {
+        !streamingProviderBaseURL.isEmpty
+    }
+
     var preferredColorScheme: ColorScheme? {
         appearance.colorScheme
+    }
+
+    func completeInitialSetup(tmdbCredential: String, streamingProviderBaseURL: String) {
+        objectWillChange.send()
+        tmdbCredentialStorage = NightFlixUserConfiguration.normalizedTMDBCredential(from: tmdbCredential)
+        streamingProviderBaseURLStorage = NightFlixUserConfiguration.normalizedStreamingProviderBaseURL(from: streamingProviderBaseURL)
+        hasCompletedInitialSetupStorage = true
+    }
+
+    func resetInitialSetupCredentials() {
+        UserDefaults.standard.removeObject(forKey: AppSettingsStorageKey.tmdbCredential)
+        UserDefaults.standard.removeObject(forKey: AppSettingsStorageKey.streamingProviderBaseURL)
+        UserDefaults.standard.set(false, forKey: AppSettingsStorageKey.hasCompletedInitialSetup)
     }
 }
 
@@ -136,22 +234,43 @@ struct NightflixTitleView: View {
     }
 }
 
-enum VidkingURLBuilder {
+enum StreamingProviderURLBuilder {
+    static var isConfigured: Bool {
+        !providerBaseURL.isEmpty
+    }
+
+    static let configurationErrorMessage = "Add a movie provider URL in Settings before playing."
+
     static func movieURL(tmdbId: Int) -> URL? {
-        var components = URLComponents()
-        components.scheme = "https"
-        components.host = "www.vidking.net"
-        components.path = "/embed/movie/\(tmdbId)"
-        components.queryItems = fixedPlaybackQueryItems
-        return components.url
+        url(appending: "/embed/movie/\(tmdbId)")
     }
 
     static func tvURL(tmdbId: Int, season: Int, episode: Int) -> URL? {
-        var components = URLComponents()
-        components.scheme = "https"
-        components.host = "www.vidking.net"
-        components.path = "/embed/tv/\(tmdbId)/\(season)/\(episode)"
-        components.queryItems = fixedPlaybackQueryItems
+        url(appending: "/embed/tv/\(tmdbId)/\(season)/\(episode)")
+    }
+
+    private static var providerBaseURL: String {
+        NightFlixUserConfiguration.normalizedStreamingProviderBaseURL(
+            from: UserDefaults.standard.string(forKey: AppSettingsStorageKey.streamingProviderBaseURL) ?? ""
+        )
+    }
+
+    private static func url(appending embedPath: String) -> URL? {
+        guard !providerBaseURL.isEmpty,
+              var components = URLComponents(string: providerBaseURL),
+              components.scheme != nil,
+              components.host != nil else {
+            return nil
+        }
+
+        let basePath = components.path.trimmingSlashes()
+        let routePath = embedPath.trimmingSlashes()
+        let combinedPath = [basePath, routePath]
+            .filter { !$0.isEmpty }
+            .joined(separator: "/")
+
+        components.path = "/\(combinedPath)"
+        components.queryItems = (components.queryItems ?? []) + fixedPlaybackQueryItems
         return components.url
     }
 
@@ -162,6 +281,26 @@ enum VidkingURLBuilder {
             URLQueryItem(name: "nextEpisode", value: "true"),
             URLQueryItem(name: "episodeSelector", value: "true")
         ]
+    }
+}
+
+private extension String {
+    func hasCaseInsensitivePrefix(_ prefix: String) -> Bool {
+        range(of: prefix, options: [.caseInsensitive, .anchored]) != nil
+    }
+
+    func trimmingTrailingSlashes() -> String {
+        var value = self
+
+        while value.hasSuffix("/") {
+            value.removeLast()
+        }
+
+        return value
+    }
+
+    func trimmingSlashes() -> String {
+        trimmingCharacters(in: CharacterSet(charactersIn: "/"))
     }
 }
 

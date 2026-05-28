@@ -1,7 +1,7 @@
 import Foundation
 
 enum TMDBServiceError: LocalizedError {
-    case missingBearerToken
+    case missingCredential
     case invalidURL
     case networkFailure(Error)
     case invalidResponse
@@ -10,8 +10,8 @@ enum TMDBServiceError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .missingBearerToken:
-            return "Add your TMDB bearer token in TMDBConfig before loading TMDB data."
+        case .missingCredential:
+            return "Add your TMDB Read Access Token in Settings before loading TMDB data."
         case .invalidURL:
             return "The TMDB URL could not be created."
         case .networkFailure(let error):
@@ -201,8 +201,9 @@ struct TMDBService {
         path: String,
         queryItems: [URLQueryItem] = []
     ) async throws -> Result {
-        guard TMDBConfig.hasConfiguredBearerToken else {
-            throw TMDBServiceError.missingBearerToken
+        let credential = TMDBConfig.credential
+        guard NightFlixUserConfiguration.isValidTMDBReadAccessToken(credential) else {
+            throw TMDBServiceError.missingCredential
         }
 
         var components = URLComponents()
@@ -217,7 +218,7 @@ struct TMDBService {
 
         var request = URLRequest(url: url)
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("Bearer \(TMDBConfig.bearerToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization")
 
         let data: Data
         do {

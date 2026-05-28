@@ -1,6 +1,6 @@
 import Foundation
 
-/// The kind of Vidking embed route the app should generate.
+/// The kind of embed route the app should generate.
 enum WatchType: String, Codable, CaseIterable, Identifiable, Hashable {
     case movie
     case tv

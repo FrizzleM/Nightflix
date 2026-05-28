@@ -6,6 +6,9 @@ struct ContinueWatchingItem: Identifiable, Codable, Equatable, Hashable {
     let type: WatchType
     let title: String
     let tmdbId: String
+    let season: Int?
+    let episode: Int?
+    let episodeName: String?
     let posterPath: String?
     let playableURL: URL?
     let lastWatchedDate: Date
@@ -15,6 +18,9 @@ struct ContinueWatchingItem: Identifiable, Codable, Equatable, Hashable {
         type: WatchType,
         title: String,
         tmdbId: String,
+        season: Int? = nil,
+        episode: Int? = nil,
+        episodeName: String? = nil,
         posterPath: String? = nil,
         playableURL: URL? = nil,
         lastWatchedDate: Date = Date()
@@ -23,6 +29,9 @@ struct ContinueWatchingItem: Identifiable, Codable, Equatable, Hashable {
         self.type = type
         self.title = title
         self.tmdbId = tmdbId
+        self.season = season
+        self.episode = episode
+        self.episodeName = episodeName
         self.posterPath = posterPath
         self.playableURL = playableURL
         self.lastWatchedDate = lastWatchedDate
