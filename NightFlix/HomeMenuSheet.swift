@@ -9,6 +9,11 @@ enum HomeMenuDestination: String, Identifiable {
 }
 
 struct HomeMenuSheet: View {
+    private let itemCount = 5
+    private let itemStaggerDelay = 0.055
+    private let itemAnimationCompletionPadding = 0.18
+    private let backdropAnimationDuration = 0.24
+
     let isPresented: Bool
     let animationsEnabled: Bool
     let onMyList: () -> Void
@@ -17,6 +22,12 @@ struct HomeMenuSheet: View {
     let onDonate: () -> Void
     let onDismiss: () -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var shouldRender = false
+    @State private var areItemsPresented = false
+    @State private var backdropOpacity = 0.0
+    @State private var renderCycle = 0
+
     var body: some View {
         GeometryReader { proxy in
             let safeTop = proxy.safeAreaInsets.top > 0 ? proxy.safeAreaInsets.top : 44
@@ -24,11 +35,11 @@ struct HomeMenuSheet: View {
             let maxButtonWidth = min(proxy.size.width - 40, 360)
 
             ZStack {
-                if isPresented {
-                    Color.black
-                        .opacity(0.76)
+                if shouldRender {
+                    overlayColor
                         .ignoresSafeArea()
-                        .background(.regularMaterial)
+                        .background(.ultraThinMaterial)
+                        .opacity(backdropOpacity)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             onDismiss()
@@ -39,6 +50,7 @@ struct HomeMenuSheet: View {
                         safeTop: safeTop,
                         safeBottom: safeBottom,
                         maxButtonWidth: maxButtonWidth,
+                        isPresented: areItemsPresented,
                         animationsEnabled: animationsEnabled,
                         onClose: onDismiss,
                         onMyList: onMyList,
@@ -53,6 +65,14 @@ struct HomeMenuSheet: View {
         .ignoresSafeArea()
         .allowsHitTesting(isPresented)
         .animation(menuAnimation, value: isPresented)
+        .onAppear {
+            shouldRender = isPresented
+            areItemsPresented = isPresented
+            backdropOpacity = isPresented ? 1 : 0
+        }
+        .onChange(of: isPresented) { _, newValue in
+            updateRenderedState(isPresented: newValue)
+        }
     }
 
     private var menuAnimation: Animation? {
@@ -63,12 +83,87 @@ struct HomeMenuSheet: View {
         animationsEnabled ? .opacity : .identity
     }
 
+    private var overlayColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.80) : Color.black.opacity(0.44)
+    }
+
+    private var itemAnimationDuration: Double {
+        guard animationsEnabled else { return 0 }
+        return Double(itemCount - 1) * itemStaggerDelay + itemAnimationCompletionPadding
+    }
+
+    private var closeAnimationDuration: Double {
+        itemAnimationDuration + backdropAnimationDuration
+    }
+
+    private var backdropAnimation: Animation? {
+        animationsEnabled ? .easeOut(duration: backdropAnimationDuration) : nil
+    }
+
+    private func updateRenderedState(isPresented: Bool) {
+        renderCycle += 1
+        let currentCycle = renderCycle
+
+        if isPresented {
+            let wasRendered = shouldRender
+            shouldRender = true
+
+            if !wasRendered {
+                backdropOpacity = animationsEnabled ? 0 : 1
+                areItemsPresented = false
+            }
+
+            guard animationsEnabled else {
+                backdropOpacity = 1
+                areItemsPresented = true
+                return
+            }
+
+            DispatchQueue.main.async {
+                guard renderCycle == currentCycle, self.isPresented else { return }
+
+                withAnimation(backdropAnimation) {
+                    backdropOpacity = 1
+                }
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + backdropAnimationDuration) {
+                guard renderCycle == currentCycle, self.isPresented else { return }
+                areItemsPresented = true
+            }
+            return
+        }
+
+        guard animationsEnabled else {
+            areItemsPresented = false
+            backdropOpacity = 0
+            shouldRender = false
+            return
+        }
+
+        areItemsPresented = false
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + itemAnimationDuration) {
+            guard renderCycle == currentCycle, !self.isPresented else { return }
+
+            withAnimation(backdropAnimation) {
+                backdropOpacity = 0
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + closeAnimationDuration) {
+            guard renderCycle == currentCycle, !self.isPresented else { return }
+            shouldRender = false
+        }
+    }
+
 }
 
 private struct HomeMenuButtonCluster: View {
     let safeTop: CGFloat
     let safeBottom: CGFloat
     let maxButtonWidth: CGFloat
+    let isPresented: Bool
     let animationsEnabled: Bool
     let onClose: () -> Void
     let onMyList: () -> Void
@@ -76,7 +171,9 @@ private struct HomeMenuButtonCluster: View {
     let onSettings: () -> Void
     let onDonate: () -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
     @State private var visibleItems = Set<Int>()
+    @State private var itemAnimationCycle = 0
 
     var body: some View {
         VStack(spacing: 14) {
@@ -99,7 +196,10 @@ private struct HomeMenuButtonCluster: View {
         .padding(.bottom, safeBottom + 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         .onAppear {
-            animateItemsIn()
+            updateItemVisibility(isPresented: isPresented)
+        }
+        .onChange(of: isPresented) { _, newValue in
+            updateItemVisibility(isPresented: newValue)
         }
     }
 
@@ -109,14 +209,14 @@ private struct HomeMenuButtonCluster: View {
         } label: {
             Image(systemName: "xmark")
                 .font(.headline.weight(.black))
-                .foregroundStyle(.white)
+                .foregroundStyle(closeButtonForegroundColor)
                 .frame(width: 48, height: 48)
-                .background(.black, in: Circle())
+                .background(closeButtonBackgroundColor, in: Circle())
                 .overlay {
                     Circle()
-                        .stroke(.white.opacity(0.18), lineWidth: 1)
+                        .stroke(closeButtonStrokeColor, lineWidth: 1)
                 }
-                .shadow(color: .black.opacity(0.58), radius: 18, y: 8)
+                .shadow(color: closeButtonShadowColor, radius: 18, y: 8)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Close menu")
@@ -160,7 +260,7 @@ private struct HomeMenuButtonCluster: View {
             .frame(minHeight: 72)
             .background(buttonBackground(isProminent: isProminent))
             .overlay { buttonStroke(isProminent: isProminent) }
-            .shadow(color: .black.opacity(0.62), radius: 22, y: 10)
+            .shadow(color: buttonShadowColor, radius: 22, y: 10)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -169,14 +269,14 @@ private struct HomeMenuButtonCluster: View {
 
     private func buttonBackground(isProminent: Bool) -> some View {
         RoundedRectangle(cornerRadius: 22, style: .continuous)
-            .fill(.black)
+            .fill(buttonBackgroundColor)
             .overlay(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [
-                                .white.opacity(isProminent ? 0.12 : 0.08),
-                                NightFlixStyle.accentColor.opacity(isProminent ? 0.16 : 0.05),
+                                buttonHighlightColor(isProminent: isProminent),
+                                buttonAccentWashColor(isProminent: isProminent),
                                 .clear
                             ],
                             startPoint: .topLeading,
@@ -190,13 +290,17 @@ private struct HomeMenuButtonCluster: View {
     private func buttonStroke(isProminent: Bool) -> some View {
         RoundedRectangle(cornerRadius: 22, style: .continuous)
             .stroke(
-                isProminent ? NightFlixStyle.accentColor.opacity(0.72) : Color.white.opacity(0.14),
+                buttonStrokeColor(isProminent: isProminent),
                 lineWidth: isProminent ? 1.5 : 1
             )
     }
 
     private func iconBackgroundColor(isProminent: Bool) -> Color {
-        isProminent ? NightFlixStyle.accentColor.opacity(0.28) : NightFlixStyle.accentColor.opacity(0.18)
+        if colorScheme == .dark {
+            return isProminent ? NightFlixStyle.accentColor.opacity(0.28) : NightFlixStyle.accentColor.opacity(0.18)
+        }
+
+        return isProminent ? NightFlixStyle.accentColor.opacity(0.18) : NightFlixStyle.accentColor.opacity(0.12)
     }
 
     private func iconForegroundColor(isProminent: Bool) -> Color {
@@ -204,14 +308,64 @@ private struct HomeMenuButtonCluster: View {
     }
 
     private func buttonTextColor(isProminent: Bool) -> Color {
-        if isProminent {
-            return .white
-        }
-
-        return .white
+        colorScheme == .dark ? .white : .black
     }
 
-    private func animateItemsIn() {
+    private var closeButtonForegroundColor: Color {
+        colorScheme == .dark ? .white : .black
+    }
+
+    private var closeButtonBackgroundColor: Color {
+        colorScheme == .dark ? .black : .white
+    }
+
+    private var closeButtonStrokeColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.18) : Color.black.opacity(0.12)
+    }
+
+    private var closeButtonShadowColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.58) : Color.black.opacity(0.16)
+    }
+
+    private var buttonBackgroundColor: Color {
+        colorScheme == .dark ? .black : .white
+    }
+
+    private var buttonShadowColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.62) : Color.black.opacity(0.12)
+    }
+
+    private func buttonStrokeColor(isProminent: Bool) -> Color {
+        if isProminent {
+            return NightFlixStyle.accentColor.opacity(colorScheme == .dark ? 0.72 : 0.78)
+        }
+
+        return colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.10)
+    }
+
+    private func buttonHighlightColor(isProminent: Bool) -> Color {
+        colorScheme == .dark ? Color.white.opacity(isProminent ? 0.12 : 0.08) : Color.white.opacity(0.92)
+    }
+
+    private func buttonAccentWashColor(isProminent: Bool) -> Color {
+        if colorScheme == .dark {
+            return NightFlixStyle.accentColor.opacity(isProminent ? 0.16 : 0.05)
+        }
+
+        return NightFlixStyle.accentColor.opacity(isProminent ? 0.08 : 0.03)
+    }
+
+    private func updateItemVisibility(isPresented: Bool) {
+        itemAnimationCycle += 1
+
+        if isPresented {
+            animateItemsIn(cycle: itemAnimationCycle)
+        } else {
+            animateItemsOut(cycle: itemAnimationCycle)
+        }
+    }
+
+    private func animateItemsIn(cycle: Int) {
         visibleItems = []
 
         guard animationsEnabled else {
@@ -221,8 +375,29 @@ private struct HomeMenuButtonCluster: View {
 
         for index in 0...4 {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.055) {
+                guard itemAnimationCycle == cycle else { return }
+
                 withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.82)) {
                     _ = visibleItems.insert(index)
+                }
+            }
+        }
+    }
+
+    private func animateItemsOut(cycle: Int) {
+        guard animationsEnabled else {
+            visibleItems = []
+            return
+        }
+
+        for index in (0...4).reversed() {
+            let delay = Double(4 - index) * 0.055
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                guard itemAnimationCycle == cycle else { return }
+
+                withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.82)) {
+                    _ = visibleItems.remove(index)
                 }
             }
         }
