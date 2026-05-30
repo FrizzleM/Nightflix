@@ -104,14 +104,15 @@ jobs:
           TAG_NAME: ${{ steps.nightly.outputs.tag_name }}
         run: |
           set -euo pipefail
+          release_body="<!-- intentionally blank -->"
 
           if gh release view "$TAG_NAME" > /dev/null 2>&1; then
-            gh release edit "$TAG_NAME" --title "$TAG_NAME" --notes "" --prerelease
+            gh release edit "$TAG_NAME" --title "$TAG_NAME" --notes "$release_body" --prerelease
             gh release view "$TAG_NAME" --json assets --jq '.assets[].name | select(endswith(".ipa") | not)' |
               while IFS= read -r asset_name; do
                 gh release delete-asset "$TAG_NAME" "$asset_name" --yes
               done
             gh release upload "$TAG_NAME" dist/*.ipa --clobber
           else
-            gh release create "$TAG_NAME" dist/*.ipa --title "$TAG_NAME" --notes "" --prerelease --verify-tag
+            gh release create "$TAG_NAME" dist/*.ipa --title "$TAG_NAME" --notes "$release_body" --prerelease --verify-tag
           fi
