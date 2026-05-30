@@ -73,7 +73,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: NightFlix-nightly-${{ steps.nightly.outputs.tag_name }}
-          path: dist/*
+          path: dist/*.ipa
           if-no-files-found: error
 
       - name: Create nightly tag
@@ -107,7 +107,11 @@ jobs:
 
           if gh release view "$TAG_NAME" > /dev/null 2>&1; then
             gh release edit "$TAG_NAME" --title "$TAG_NAME" --notes "" --prerelease
-            gh release upload "$TAG_NAME" dist/* --clobber
+            gh release view "$TAG_NAME" --json assets --jq '.assets[].name | select(endswith(".ipa") | not)' |
+              while IFS= read -r asset_name; do
+                gh release delete-asset "$TAG_NAME" "$asset_name" --yes
+              done
+            gh release upload "$TAG_NAME" dist/*.ipa --clobber
           else
-            gh release create "$TAG_NAME" dist/* --title "$TAG_NAME" --notes "" --prerelease --verify-tag
+            gh release create "$TAG_NAME" dist/*.ipa --title "$TAG_NAME" --notes "" --prerelease --verify-tag
           fi
