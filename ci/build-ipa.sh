@@ -6,7 +6,7 @@ SCHEME="${SCHEME:-NightFlix}"
 CONFIGURATION="${CONFIGURATION:-Release}"
 PRODUCT_NAME="${PRODUCT_NAME:-NightFlix}"
 BUNDLE_IDENTIFIER="${BUNDLE_IDENTIFIER:-FrizzleM.NightFlix}"
-EXPORT_METHOD="${EXPORT_METHOD:-release-testing}"
+EXPORT_METHOD="${EXPORT_METHOD:-debugging}"
 BUILD_ROOT="${BUILD_ROOT:-${RUNNER_TEMP:-$PWD/build}}"
 ARCHIVE_PATH="${ARCHIVE_PATH:-$BUILD_ROOT/$PRODUCT_NAME.xcarchive}"
 EXPORT_PATH="${EXPORT_PATH:-$PWD/dist}"
@@ -29,6 +29,12 @@ mkdir -p "$BUILD_ROOT" "$EXPORT_PATH"
 rm -f "$EXPORT_PATH"/*.ipa "$EXPORT_PATH"/*.dSYM.zip
 
 write_export_options() {
+  local team_id_entry=""
+
+  if [[ -n "${DEVELOPMENT_TEAM:-}" ]]; then
+    team_id_entry=$'	<key>teamID</key>\n	<string>'"$DEVELOPMENT_TEAM"$'</string>\n'
+  fi
+
   cat > "$EXPORT_OPTIONS_PLIST" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -40,6 +46,7 @@ write_export_options() {
 	<string>$EXPORT_METHOD</string>
 	<key>signingStyle</key>
 	<string>automatic</string>
+${team_id_entry}
 </dict>
 </plist>
 PLIST
@@ -78,7 +85,8 @@ xcodebuild \
   -exportArchive \
   -archivePath "$ARCHIVE_PATH" \
   -exportPath "$EXPORT_PATH" \
-  -exportOptionsPlist "$EXPORT_OPTIONS_PLIST"
+  -exportOptionsPlist "$EXPORT_OPTIONS_PLIST" \
+  -allowProvisioningUpdates
 
 ipa_path="$(find "$EXPORT_PATH" -maxdepth 1 -type f -name "*.ipa" -print -quit)"
 

@@ -82,7 +82,7 @@ jobs:
         shell: bash
         env:
           CURRENT_PROJECT_VERSION: ${{ github.run_number }}
-          EXPORT_METHOD: ${{ vars.IOS_STABLE_EXPORT_METHOD || 'release-testing' }}
+          EXPORT_METHOD: ${{ vars.IOS_STABLE_EXPORT_METHOD || 'debugging' }}
           IPA_NAME: ${{ steps.release.outputs.ipa_name }}
           MARKETING_VERSION: ${{ steps.release.outputs.marketing_version }}
         run: ci/build-ipa.sh

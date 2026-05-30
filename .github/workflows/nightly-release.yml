@@ -66,7 +66,7 @@ jobs:
         shell: bash
         env:
           CURRENT_PROJECT_VERSION: ${{ github.run_number }}
-          EXPORT_METHOD: ${{ vars.IOS_NIGHTLY_EXPORT_METHOD || 'release-testing' }}
+          EXPORT_METHOD: ${{ vars.IOS_NIGHTLY_EXPORT_METHOD || 'debugging' }}
           IPA_NAME: ${{ steps.nightly.outputs.ipa_name }}
         run: ci/build-ipa.sh
 
