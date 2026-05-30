@@ -123,12 +123,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          notes_file="$RUNNER_TEMP/stable-release-notes.md"
-          : > "$notes_file"
-
           if gh release view "$TAG_NAME" > /dev/null 2>&1; then
-            gh release edit "$TAG_NAME" --title "$TAG_NAME" --notes-file "$notes_file" --latest
+            gh release edit "$TAG_NAME" --title "$TAG_NAME" --notes "" --latest
             gh release upload "$TAG_NAME" dist/* --clobber
           else
-            gh release create "$TAG_NAME" dist/* --title "$TAG_NAME" --notes-file "$notes_file" --latest
+            gh release create "$TAG_NAME" dist/* --title "$TAG_NAME" --notes "" --latest --verify-tag
           fi
