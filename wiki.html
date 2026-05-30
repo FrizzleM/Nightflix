@@ -3,27 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>NightFlix Wiki</title>
-  <meta name="description" content="NightFlix setup, TMDB key instructions, safe source policy, and user guide.">
+  <title>NightFlix Help</title>
+  <meta name="description" content="A simple NightFlix user guide for setup, TMDB, safe movie sources, and common fixes.">
   <style>
     :root {
       color-scheme: dark;
       --bg: #08090b;
-      --panel: #121419;
-      --panel-soft: #181b22;
-      --ink: #f5f6f8;
-      --muted: #a8adb8;
-      --quiet: #737a87;
-      --line: rgba(255, 255, 255, 0.12);
-      --line-strong: rgba(255, 255, 255, 0.2);
+      --panel: #14161c;
+      --panel-soft: #1b1e26;
+      --text: #f6f7f9;
+      --muted: #b5bac5;
+      --quiet: #828996;
+      --line: rgba(255, 255, 255, 0.13);
       --red: #e50914;
-      --red-soft: rgba(229, 9, 20, 0.12);
-      --green: #75d978;
-      --blue: #7cc7ff;
-      --amber: #ffca6e;
-      --max: 1180px;
-      --radius: 8px;
-      --shadow: 0 22px 70px rgba(0, 0, 0, 0.38);
+      --red-soft: rgba(229, 9, 20, 0.14);
+      --green: #76d979;
+      --amber: #ffd27a;
+      --max: 1040px;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -39,16 +35,14 @@
     body {
       margin: 0;
       min-width: 320px;
-      color: var(--ink);
-      background:
-        linear-gradient(180deg, rgba(229, 9, 20, 0.06), transparent 330px),
-        var(--bg);
+      color: var(--text);
+      background: var(--bg);
       font-size: 16px;
       line-height: 1.6;
     }
 
     a {
-      color: var(--blue);
+      color: #93d5ff;
       text-decoration: none;
     }
 
@@ -57,56 +51,12 @@
       text-underline-offset: 3px;
     }
 
-    code {
-      color: #f2f4f8;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      padding: 0.12rem 0.35rem;
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-      font-size: 0.92em;
-    }
-
-    pre {
-      overflow-x: auto;
-      margin: 0;
-      padding: 16px;
-      background: #0b0d11;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      color: #eef2f7;
-      line-height: 1.45;
-    }
-
-    pre code {
-      padding: 0;
-      border: 0;
-      background: transparent;
-    }
-
-    .skip-link {
-      position: absolute;
-      left: 16px;
-      top: 12px;
-      z-index: 10;
-      transform: translateY(-180%);
-      padding: 10px 14px;
-      background: var(--ink);
-      color: #08090b;
-      border-radius: 6px;
-      font-weight: 800;
-    }
-
-    .skip-link:focus {
-      transform: translateY(0);
-    }
-
     .topbar {
       position: sticky;
       top: 0;
-      z-index: 5;
-      background: rgba(8, 9, 11, 0.82);
+      z-index: 10;
       border-bottom: 1px solid var(--line);
+      background: rgba(8, 9, 11, 0.86);
       backdrop-filter: blur(18px);
     }
 
@@ -116,37 +66,33 @@
       justify-content: space-between;
       gap: 18px;
       width: min(var(--max), calc(100% - 32px));
+      min-height: 64px;
       margin: 0 auto;
-      min-height: 62px;
     }
 
     .brand {
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      min-width: max-content;
-      color: var(--ink);
+      color: var(--text);
       font-weight: 900;
-      letter-spacing: 0;
+      white-space: nowrap;
     }
 
     .brand-mark {
       display: grid;
       place-items: center;
-      width: 32px;
-      height: 32px;
-      background: var(--red);
+      width: 34px;
+      height: 34px;
       border-radius: 7px;
-      color: #fff;
-      box-shadow: 0 0 22px rgba(229, 9, 20, 0.36);
-      font-size: 16px;
-      line-height: 1;
-      font-weight: 900;
+      color: white;
+      background: var(--red);
+      box-shadow: 0 0 24px rgba(229, 9, 20, 0.34);
+      font-weight: 950;
     }
 
     .nav {
       display: flex;
-      align-items: center;
       gap: 4px;
       overflow-x: auto;
       scrollbar-width: none;
@@ -161,27 +107,27 @@
       align-items: center;
       min-height: 38px;
       padding: 0 12px;
-      color: var(--muted);
       border-radius: 6px;
+      color: var(--muted);
       font-size: 0.92rem;
       font-weight: 750;
       white-space: nowrap;
     }
 
     .nav a:hover {
-      color: var(--ink);
-      background: rgba(255, 255, 255, 0.07);
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
       text-decoration: none;
     }
 
     .hero {
       position: relative;
-      min-height: 560px;
       display: grid;
       align-items: end;
+      min-height: 560px;
       overflow: hidden;
       border-bottom: 1px solid var(--line);
-      background: #06070a;
+      background: #050609;
     }
 
     .hero::before {
@@ -189,8 +135,8 @@
       position: absolute;
       inset: 0;
       background-image:
-        linear-gradient(90deg, rgba(8, 9, 11, 0.98) 0%, rgba(8, 9, 11, 0.72) 42%, rgba(8, 9, 11, 0.18) 100%),
-        linear-gradient(0deg, rgba(8, 9, 11, 1) 0%, rgba(8, 9, 11, 0.58) 28%, rgba(8, 9, 11, 0.05) 72%),
+        linear-gradient(90deg, rgba(8, 9, 11, 0.98) 0%, rgba(8, 9, 11, 0.78) 42%, rgba(8, 9, 11, 0.22) 100%),
+        linear-gradient(0deg, rgba(8, 9, 11, 1) 0%, rgba(8, 9, 11, 0.48) 42%, rgba(8, 9, 11, 0.08) 78%),
         url("wiki-assets/nightflix-wiki-hero.png");
       background-position: center;
       background-size: cover;
@@ -200,52 +146,41 @@
       position: relative;
       width: min(var(--max), calc(100% - 32px));
       margin: 0 auto;
-      padding: 88px 0 54px;
+      padding: 96px 0 56px;
     }
 
     .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
       color: var(--red);
       font-size: 0.78rem;
-      font-weight: 900;
+      font-weight: 950;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-    }
-
-    .eyebrow::before {
-      content: "";
-      width: 30px;
-      height: 2px;
-      background: var(--red);
-      border-radius: 999px;
     }
 
     h1,
     h2,
     h3 {
       margin: 0;
-      line-height: 1.08;
+      line-height: 1.1;
       letter-spacing: 0;
     }
 
     h1 {
-      max-width: 740px;
+      max-width: 760px;
       margin-top: 14px;
-      font-size: clamp(3rem, 8vw, 6.8rem);
+      font-size: clamp(3rem, 8vw, 6.2rem);
       font-weight: 950;
     }
 
-    .hero-copy {
-      max-width: 700px;
+    .hero p {
+      max-width: 690px;
       margin: 22px 0 0;
-      color: #d6d9df;
-      font-size: clamp(1.04rem, 2vw, 1.28rem);
+      color: #d8dbe1;
+      font-size: clamp(1.05rem, 2vw, 1.26rem);
       font-weight: 560;
     }
 
-    .hero-actions {
+    .buttons {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
@@ -258,30 +193,21 @@
       justify-content: center;
       min-height: 44px;
       padding: 0 16px;
-      border: 1px solid transparent;
       border-radius: 6px;
-      font-weight: 850;
-      color: #fff;
+      color: white;
       background: var(--red);
-    }
-
-    .button:hover {
-      background: #f21a25;
-      text-decoration: none;
+      font-weight: 850;
     }
 
     .button.secondary {
-      color: var(--ink);
-      background: rgba(255, 255, 255, 0.08);
-      border-color: var(--line-strong);
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--line);
     }
 
-    .button.secondary:hover {
-      background: rgba(255, 255, 255, 0.13);
-    }
-
-    main {
-      background: var(--bg);
+    .button:hover {
+      text-decoration: none;
+      filter: brightness(1.08);
     }
 
     .section {
@@ -291,40 +217,37 @@
     .section-inner {
       width: min(var(--max), calc(100% - 32px));
       margin: 0 auto;
-      padding: 72px 0;
+      padding: 58px 0;
     }
 
     .section-heading {
-      display: grid;
-      grid-template-columns: minmax(0, 0.72fr) minmax(280px, 0.28fr);
-      gap: 34px;
-      align-items: end;
-      margin-bottom: 30px;
+      max-width: 760px;
+      margin-bottom: 24px;
     }
 
-    .section-kicker {
-      margin-bottom: 10px;
+    .kicker {
+      margin-bottom: 8px;
       color: var(--red);
       font-size: 0.78rem;
-      font-weight: 900;
+      font-weight: 950;
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
 
     h2 {
-      font-size: clamp(2rem, 4vw, 3.6rem);
-      font-weight: 920;
+      font-size: clamp(2rem, 4vw, 3.3rem);
+      font-weight: 930;
     }
 
     h3 {
-      font-size: 1.18rem;
-      font-weight: 870;
+      font-size: 1.16rem;
+      font-weight: 880;
     }
 
-    .section-lede {
-      margin: 0;
+    .lead {
+      margin: 14px 0 0;
       color: var(--muted);
-      font-size: 1.02rem;
+      font-size: 1.05rem;
       font-weight: 520;
     }
 
@@ -338,155 +261,86 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .card {
+    .card,
+    .callout,
+    .step {
       min-width: 0;
-      background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: var(--radius);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .card,
+    .callout {
       padding: 20px;
-      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
     }
 
-    .card p {
-      margin: 10px 0 0;
+    .card p,
+    .callout p,
+    .step p {
+      margin: 9px 0 0;
       color: var(--muted);
-    }
-
-    .card strong {
-      color: var(--ink);
-    }
-
-    .stat {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--muted);
-      font-weight: 720;
-    }
-
-    .stat b {
-      color: var(--ink);
-      font-size: 1.5rem;
-      line-height: 1;
     }
 
     .steps {
       display: grid;
       gap: 12px;
-      counter-reset: step;
+      counter-reset: steps;
     }
 
     .step {
       display: grid;
-      grid-template-columns: 48px minmax(0, 1fr);
+      grid-template-columns: 46px minmax(0, 1fr);
       gap: 16px;
-      align-items: start;
       padding: 18px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      counter-increment: step;
+      counter-increment: steps;
     }
 
     .step::before {
-      content: counter(step);
+      content: counter(steps);
       display: grid;
       place-items: center;
-      width: 48px;
-      height: 48px;
-      background: var(--red-soft);
-      border: 1px solid rgba(229, 9, 20, 0.34);
+      width: 46px;
+      height: 46px;
       border-radius: 8px;
-      color: #ffb5ba;
-      font-weight: 900;
-    }
-
-    .step p {
-      margin: 8px 0 0;
-      color: var(--muted);
+      color: #ffc2c6;
+      background: var(--red-soft);
+      border: 1px solid rgba(229, 9, 20, 0.35);
+      font-weight: 950;
     }
 
     .callout {
-      padding: 20px;
-      border-radius: var(--radius);
-      border: 1px solid var(--line);
       background: var(--panel-soft);
     }
 
-    .callout h3 {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 8px;
+    .callout.good {
+      border-color: rgba(118, 217, 121, 0.36);
+      background: rgba(118, 217, 121, 0.08);
     }
 
-    .callout p {
-      margin: 0;
-      color: var(--muted);
-    }
-
-    .callout.warning {
-      border-color: rgba(255, 202, 110, 0.36);
-      background: rgba(255, 202, 110, 0.08);
+    .callout.warn {
+      border-color: rgba(255, 210, 122, 0.4);
+      background: rgba(255, 210, 122, 0.08);
     }
 
     .callout.danger {
-      border-color: rgba(229, 9, 20, 0.48);
-      background: rgba(229, 9, 20, 0.1);
+      border-color: rgba(229, 9, 20, 0.52);
+      background: rgba(229, 9, 20, 0.11);
     }
 
-    .callout.success {
-      border-color: rgba(117, 217, 120, 0.32);
-      background: rgba(117, 217, 120, 0.08);
+    .callout.good h3 {
+      color: var(--green);
     }
 
-    .callout.warning h3 {
+    .callout.warn h3 {
       color: var(--amber);
     }
 
     .callout.danger h3 {
-      color: #ff838a;
+      color: #ff8e95;
     }
 
-    .callout.success h3 {
-      color: var(--green);
-    }
-
-    .split {
-      display: grid;
-      grid-template-columns: minmax(0, 0.58fr) minmax(300px, 0.42fr);
-      gap: 18px;
-      align-items: start;
-    }
-
-    .toc {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: -22px;
-      position: relative;
-      z-index: 2;
-    }
-
-    .toc a {
-      display: flex;
-      min-height: 76px;
-      align-items: center;
-      padding: 16px;
-      color: var(--ink);
-      background: rgba(18, 20, 25, 0.96);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      font-weight: 820;
-      box-shadow: var(--shadow);
-    }
-
-    .toc a:hover {
-      border-color: rgba(229, 9, 20, 0.55);
-      text-decoration: none;
-    }
-
-    .checklist {
+    .list {
       display: grid;
       gap: 10px;
       margin: 0;
@@ -494,109 +348,46 @@
       list-style: none;
     }
 
-    .checklist li {
+    .list li {
       display: grid;
-      grid-template-columns: 22px minmax(0, 1fr);
+      grid-template-columns: 24px minmax(0, 1fr);
       gap: 10px;
       color: var(--muted);
     }
 
-    .checklist li::before {
-      content: "OK";
-      display: inline-grid;
+    .list li::before {
+      content: "✓";
+      display: grid;
       place-items: center;
-      width: 22px;
-      height: 22px;
+      width: 24px;
+      height: 24px;
       border-radius: 6px;
-      color: #061008;
+      color: #071207;
       background: var(--green);
-      font-size: 0.62rem;
-      font-weight: 900;
+      font-weight: 950;
       line-height: 1;
     }
 
-    .avoid-list li::before {
-      content: "NO";
-      color: #fff;
+    .list.no li::before {
+      content: "!";
+      color: white;
       background: var(--red);
     }
 
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--panel);
-    }
-
-    .data-table th,
-    .data-table td {
-      padding: 14px;
-      border-bottom: 1px solid var(--line);
-      text-align: left;
-      vertical-align: top;
-    }
-
-    .data-table th {
-      color: var(--ink);
-      background: rgba(255, 255, 255, 0.05);
-      font-size: 0.86rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    .data-table td {
-      color: var(--muted);
-    }
-
-    .data-table tr:last-child td {
-      border-bottom: 0;
-    }
-
-    .source-flow {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 10px;
-      align-items: stretch;
-    }
-
-    .flow-node {
-      min-height: 116px;
-      padding: 16px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-    }
-
-    .flow-node small {
-      display: block;
-      margin-bottom: 8px;
-      color: var(--red);
-      font-weight: 900;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    .flow-node p {
-      margin: 8px 0 0;
-      color: var(--muted);
+    .small {
+      color: var(--quiet);
       font-size: 0.94rem;
     }
 
     .footer {
       width: min(var(--max), calc(100% - 32px));
       margin: 0 auto;
-      padding: 34px 0 46px;
+      padding: 34px 0 44px;
       color: var(--quiet);
       font-size: 0.94rem;
     }
 
-    .footer strong {
-      color: var(--muted);
-    }
-
-    @media (max-width: 980px) {
+    @media (max-width: 820px) {
       .topbar-inner {
         align-items: flex-start;
         flex-direction: column;
@@ -608,51 +399,37 @@
       }
 
       .hero {
-        min-height: 650px;
+        min-height: 620px;
       }
 
       .hero::before {
         background-image:
-          linear-gradient(90deg, rgba(8, 9, 11, 0.96) 0%, rgba(8, 9, 11, 0.74) 62%, rgba(8, 9, 11, 0.28) 100%),
-          linear-gradient(0deg, rgba(8, 9, 11, 1) 0%, rgba(8, 9, 11, 0.62) 34%, rgba(8, 9, 11, 0.08) 78%),
+          linear-gradient(90deg, rgba(8, 9, 11, 0.98) 0%, rgba(8, 9, 11, 0.82) 58%, rgba(8, 9, 11, 0.34) 100%),
+          linear-gradient(0deg, rgba(8, 9, 11, 1) 0%, rgba(8, 9, 11, 0.56) 42%, rgba(8, 9, 11, 0.1) 82%),
           url("wiki-assets/nightflix-wiki-hero.png");
       }
 
-      .section-heading,
-      .split {
-        grid-template-columns: 1fr;
-      }
-
       .grid,
-      .grid.two,
-      .toc,
-      .source-flow {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+      .grid.two {
+        grid-template-columns: 1fr;
       }
     }
 
-    @media (max-width: 640px) {
+    @media (max-width: 560px) {
       body {
         font-size: 15px;
       }
 
       .hero {
-        min-height: 600px;
+        min-height: 560px;
       }
 
       .hero-content {
-        padding: 72px 0 42px;
+        padding: 74px 0 42px;
       }
 
       .section-inner {
-        padding: 52px 0;
-      }
-
-      .grid,
-      .grid.two,
-      .toc,
-      .source-flow {
-        grid-template-columns: 1fr;
+        padding: 46px 0;
       }
 
       .step {
@@ -663,516 +440,245 @@
         width: 40px;
         height: 40px;
       }
-
-      .data-table,
-      .data-table tbody,
-      .data-table tr,
-      .data-table td {
-        display: block;
-      }
-
-      .data-table thead {
-        display: none;
-      }
-
-      .data-table tr {
-        border-bottom: 1px solid var(--line);
-      }
-
-      .data-table tr:last-child {
-        border-bottom: 0;
-      }
-
-      .data-table td {
-        border-bottom: 0;
-      }
-
-      .data-table td::before {
-        content: attr(data-label);
-        display: block;
-        margin-bottom: 4px;
-        color: var(--ink);
-        font-size: 0.76rem;
-        font-weight: 900;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-      }
     }
   </style>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to wiki content</a>
-
-  <header class="topbar" aria-label="NightFlix wiki navigation">
+  <header class="topbar">
     <div class="topbar-inner">
-      <a class="brand" href="#top" aria-label="NightFlix Wiki home">
+      <a class="brand" href="#top" aria-label="NightFlix Help home">
         <span class="brand-mark" aria-hidden="true">N</span>
-        <span>NightFlix Wiki</span>
+        <span>NightFlix Help</span>
       </a>
-      <nav class="nav" aria-label="Wiki sections">
-        <a href="#overview">Overview</a>
-        <a href="#setup">Setup</a>
-        <a href="#tmdb-key">TMDB Key</a>
-        <a href="#source-policy">Source Policy</a>
-        <a href="#troubleshooting">Troubleshooting</a>
-        <a href="#developer-notes">Developer Notes</a>
+      <nav class="nav" aria-label="Page sections">
+        <a href="#start">Start</a>
+        <a href="#tmdb">TMDB</a>
+        <a href="#sources">Movie Sources</a>
+        <a href="#use">Using NightFlix</a>
+        <a href="#fixes">Fixes</a>
       </nav>
     </div>
   </header>
 
-  <section class="hero" id="top" aria-label="NightFlix wiki introduction">
-    <div class="hero-content">
-      <span class="eyebrow">Setup and operating guide</span>
-      <h1>NightFlix Wiki</h1>
-      <p class="hero-copy">
-        A practical guide for running NightFlix, creating the TMDB credential the app expects,
-        choosing safe playback sources, and understanding the main moving parts of the project.
-      </p>
-      <div class="hero-actions" aria-label="Primary wiki actions">
-        <a class="button" href="#tmdb-key">Create a TMDB Key</a>
-        <a class="button secondary" href="#source-policy">Read Source Rules</a>
-      </div>
-    </div>
-  </section>
-
-  <main id="main">
-    <div class="section">
-      <div class="section-inner">
-        <nav class="toc" aria-label="Quick links">
-          <a href="#setup">First-time setup</a>
-          <a href="#tmdb-key">TMDB key steps</a>
-          <a href="#source-policy">Safe source policy</a>
-          <a href="#troubleshooting">Fix common issues</a>
-        </nav>
-      </div>
-    </div>
-
-    <section class="section" id="overview" aria-labelledby="overview-title">
-      <div class="section-inner">
-        <div class="section-heading">
-          <div>
-            <div class="section-kicker">Overview</div>
-            <h2 id="overview-title">What NightFlix Does</h2>
-          </div>
-          <p class="section-lede">
-            NightFlix is a SwiftUI media browser that uses TMDB for metadata and an optional
-            user-provided playback provider for embedded viewing.
-          </p>
-        </div>
-
-        <div class="grid">
-          <article class="card">
-            <h3>Browse metadata</h3>
-            <p>
-              The home, search, category, movie detail, and series detail screens are powered by
-              TMDB endpoints for titles, posters, backdrops, genres, cast, trailers, and recommendations.
-            </p>
-          </article>
-          <article class="card">
-            <h3>Keep local lists</h3>
-            <p>
-              My List and Continue Watching are saved locally on the device. Clearing setup details
-              removes the TMDB token and provider URL from local app storage.
-            </p>
-          </article>
-          <article class="card">
-            <h3>Use your own provider</h3>
-            <p>
-              NightFlix does not ship a movie catalog or host streams. If playback is enabled, the
-              provider URL must point to a lawful source you control or are allowed to use.
-            </p>
-          </article>
+  <main id="top">
+    <section class="hero">
+      <div class="hero-content">
+        <div class="eyebrow">Watch movies. No ads. Open source.</div>
+        <h1>NightFlix</h1>
+        <p>
+          by Frizzle
+        </p>
+        <div class="buttons">
+          <a class="button" href="#start">Start Setup</a>
         </div>
       </div>
     </section>
-
-    <section class="section" id="setup" aria-labelledby="setup-title">
+   
+    <section class="section" id="tmdb">
       <div class="section-inner">
         <div class="section-heading">
-          <div>
-            <div class="section-kicker">Setup</div>
-            <h2 id="setup-title">First-Time Setup</h2>
-          </div>
-          <p class="section-lede">
-            The app asks for a TMDB credential first. The playback provider can be configured during
-            setup or later from Settings.
-          </p>
+          <div class="kicker">TMDB</div>
+          <h2>Step 1: Create a TMDB key</h2>
         </div>
 
         <div class="steps">
           <article class="step">
             <div>
-              <h3>Create or open a TMDB account</h3>
+              <h3>Create a TMDB account</h3>
               <p>
-                Use <a href="https://www.themoviedb.org/signup">the TMDB sign-up page</a> if you do not
-                already have an account. TMDB recommends completing API registration from a desktop browser.
+                Go to <a href="https://www.themoviedb.org/signup">the TMDB sign-up page</a>,
+                create an account, and sign in. A desktop browser is easiest for this part.
               </p>
             </div>
           </article>
+
           <article class="step">
             <div>
-              <h3>Copy the API Read Access Token</h3>
+              <h3>Open the API page in your TMDB settings</h3>
               <p>
-                NightFlix expects the long TMDB API Read Access Token and sends it in the
-                <code>Authorization: Bearer</code> header. The app accepts the token with or without the
-                leading word <code>Bearer</code>.
+                In TMDB, open your account settings and choose <strong>API</strong>.
+                After signing in, <a href="https://www.themoviedb.org/settings/api">this settings link</a>
+                may take you there directly.
               </p>
             </div>
           </article>
+
           <article class="step">
             <div>
-              <h3>Add a legal provider URL</h3>
+              <h3>Request a key</h3>
               <p>
-                Enter only a provider that you are allowed to embed. You can skip this step and add it
-                later in Settings, but playback requires a configured provider.
+                Agree to TMDB's terms and fill out the short form. If TMDB asks what kind of key you need,
+                choose <strong>Developer</strong> for a personal app. That label is just TMDB's wording;
+                you do not need to be a programmer.
               </p>
             </div>
           </article>
+
           <article class="step">
             <div>
-              <h3>Open NightFlix</h3>
+              <h3>Copy the right value</h3>
               <p>
-                After setup, the app loads TMDB-powered rows such as popular movies, popular TV series,
-                top-rated titles, categories, details, recommendations, and search results.
+                Look for <strong>API Read Access Token</strong>. Copy that long token and paste it into
+                NightFlix where it asks for the TMDB Read Access Token.
+              </p>
+            </div>
+          </article>
+
+          <article class="step">
+            <div>
+              <h3>Keep it private</h3>
+              <p>
+                Do not post your token online or share screenshots of it. If you think someone else has it,
+                make a new one in TMDB and update NightFlix.
               </p>
             </div>
           </article>
         </div>
+
+        <aside class="callout good" style="margin-top: 14px;">
+          <h3>Quick tip</h3>
+          <p>
+            TMDB may also show an older value called an API Key. NightFlix wants the
+            <strong>API Read Access Token</strong>, not the shorter API Key.
+          </p>
+        </aside>
       </div>
     </section>
 
-    <section class="section" id="tmdb-key" aria-labelledby="tmdb-key-title">
+    <section class="section" id="sources">
       <div class="section-inner">
         <div class="section-heading">
-          <div>
-            <div class="section-kicker">TMDB Key</div>
-            <h2 id="tmdb-key-title">How to Create a TMDB Key</h2>
-          </div>
-          <p class="section-lede">
-            TMDB shows both a v3 API key and a newer API Read Access Token. NightFlix is built for the
-            API Read Access Token.
+          <div class="kicker">Movie Sources</div>
+          <h2>Step 2: add a source</h2>
+          <p class="lead">
+            NightFlix does not include movies by itself. If you add a source, make sure it is safe,
+            legal, and trusted.
           </p>
         </div>
 
-        <div class="split">
-          <div class="steps">
-            <article class="step">
-              <div>
-                <h3>Sign in to TMDB</h3>
-                <p>
-                  Go to <a href="https://www.themoviedb.org/signup">the TMDB sign-up page</a>, create an
-                  account, verify your email if asked, and sign in.
-                </p>
-              </div>
-            </article>
-            <article class="step">
-              <div>
-                <h3>Open API settings</h3>
-                <p>
-                  From your profile menu, open account settings and choose <strong>API</strong>. You can
-                  also try <a href="https://www.themoviedb.org/settings/api">the API settings page</a>
-                  after signing in.
-                </p>
-              </div>
-            </article>
-            <article class="step">
-              <div>
-                <h3>Request an API key</h3>
-                <p>
-                  Accept TMDB's API terms, then request a key. If TMDB asks for the type, choose the
-                  developer option for a personal or test app and fill in the required app details honestly.
-                </p>
-              </div>
-            </article>
-            <article class="step">
-              <div>
-                <h3>Copy the API Read Access Token</h3>
-                <p>
-                  In the API settings area, copy the value labeled <strong>API Read Access Token</strong>.
-                  Paste that into NightFlix where the setup screen asks for <strong>TMDB Read Access Token</strong>.
-                </p>
-              </div>
-            </article>
-            <article class="step">
-              <div>
-                <h3>Keep it private</h3>
-                <p>
-                  Treat the token like a password. Do not commit it to source control, paste it into issue
-                  trackers, or ship a public build with your personal token baked into the app.
-                </p>
-              </div>
-            </article>
-          </div>
-
-          <aside class="callout success" aria-label="TMDB token detail">
-            <h3>Use the token, not the v3 query key</h3>
+        <div class="grid two">
+          <aside class="callout danger">
+            <h3>Piracy</h3>
             <p>
-              TMDB's docs describe the API Read Access Token as a Bearer token that can be sent in an
-              Authorization header. NightFlix does exactly that for calls to <code>api.themoviedb.org</code>.
-            </p>
-            <p style="margin-top: 14px;">
-              A valid token usually looks like three long text segments separated by dots. That is why the
-              app validates the credential by checking for three dot-separated parts.
+              vidking.net as a movie source is known for piracy. Please do not use it.
             </p>
           </aside>
         </div>
       </div>
     </section>
 
-    <section class="section" id="source-policy" aria-labelledby="source-policy-title">
+    <section class="section" id="use">
       <div class="section-inner">
         <div class="section-heading">
-          <div>
-            <div class="section-kicker">Source Policy</div>
-            <h2 id="source-policy-title">Movie Provider Safety Rules</h2>
-          </div>
-          <p class="section-lede">
-            TMDB provides metadata. It does not provide playable movie streams for this app.
-            Provider URLs need a separate legal and security review.
-          </p>
+          <div class="kicker">Using NightFlix</div>
+          <h2>The Basics</h2>
         </div>
 
-        <div class="split">
-          <div class="callout danger">
-            <h3>Do not use vidking.net</h3>
-            <p>
-              vidking.net as a movie source is maliciously known for piracy. Please do not use it.
-              Do not document it as a recommended provider, do not hard-code it, and do not ask users
-              to paste it into setup.
-            </p>
-          </div>
-
-          <div class="callout warning">
-            <h3>Playback providers are your responsibility</h3>
-            <p>
-              Use only providers where you have permission to access, embed, and distribute the content.
-              Avoid domains associated with piracy, malware, invasive ads, credential theft, or unclear rights.
-            </p>
-          </div>
-        </div>
-
-        <div class="grid two" style="margin-top: 14px;">
+        <div class="grid">
           <article class="card">
-            <h3>Approved source checklist</h3>
-            <ul class="checklist">
-              <li>The provider is owned by you, your organization, or a licensed vendor.</li>
-              <li>The content rights are documented for the users and regions you support.</li>
-              <li>The provider supports HTTPS and does not redirect through unknown ad networks.</li>
-              <li>The provider can be removed quickly if it becomes unsafe or non-compliant.</li>
-            </ul>
+            <h3>Home</h3>
+            <p>Browse popular and top-rated movies and shows.</p>
           </article>
 
           <article class="card">
-            <h3>Avoid these sources</h3>
-            <ul class="checklist avoid-list">
-              <li>Sites marketed around free access to paid movies or shows without authorization.</li>
-              <li>Domains reported for piracy, malware, forced redirects, deceptive ads, or popups.</li>
-              <li>Sources that obscure ownership, hosting location, or content licensing terms.</li>
-              <li>Any provider that asks users for unrelated credentials, extensions, or downloads.</li>
-            </ul>
+            <h3>Search</h3>
+            <p>Find a movie or TV series by name.</p>
+          </article>
+
+          <article class="card">
+            <h3>Details</h3>
+            <p>Open a title to see the description, cast, trailers, seasons, and recommendations.</p>
+          </article>
+
+          <article class="card">
+            <h3>My List</h3>
+            <p>Save titles you want to find again later.</p>
+          </article>
+
+          <article class="card">
+            <h3>Continue Watching</h3>
+            <p>Return to titles you recently opened.</p>
+          </article>
+
+          <article class="card">
+            <h3>Settings</h3>
+            <p>Update your TMDB token, movie source, appearance, and saved movie information.</p>
           </article>
         </div>
       </div>
     </section>
 
-    <section class="section" id="usage" aria-labelledby="usage-title">
+    <section class="section" id="fixes">
       <div class="section-inner">
         <div class="section-heading">
-          <div>
-            <div class="section-kicker">Usage</div>
-            <h2 id="usage-title">Using the App</h2>
-          </div>
-          <p class="section-lede">
-            The main user flow is intentionally simple: discover titles, inspect details, save favorites,
-            and open the configured provider when playback is available.
-          </p>
-        </div>
-
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Area</th>
-              <th>What it does</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td data-label="Area">Home</td>
-              <td data-label="What it does">Shows hero content and rows for popular and top-rated titles.</td>
-              <td data-label="Notes">Requires a valid TMDB Read Access Token.</td>
-            </tr>
-            <tr>
-              <td data-label="Area">Search</td>
-              <td data-label="What it does">Searches movies and TV series through TMDB's multi-search flow.</td>
-              <td data-label="Notes">Results are filtered to movie and TV media types.</td>
-            </tr>
-            <tr>
-              <td data-label="Area">Categories</td>
-              <td data-label="What it does">Loads movie and TV genres, then discovers titles by genre.</td>
-              <td data-label="Notes">Genre lists are cached longer because they rarely change.</td>
-            </tr>
-            <tr>
-              <td data-label="Area">Details</td>
-              <td data-label="What it does">Shows overview, cast, trailer links, seasons, episodes, similar titles, and recommendations.</td>
-              <td data-label="Notes">TV playback needs season and episode numbers.</td>
-            </tr>
-            <tr>
-              <td data-label="Area">Settings</td>
-              <td data-label="What it does">Lets you update the TMDB token, provider URL, appearance, animation, cache, and setup state.</td>
-              <td data-label="Notes">Use this if setup details change later.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="section" id="troubleshooting" aria-labelledby="troubleshooting-title">
-      <div class="section-inner">
-        <div class="section-heading">
-          <div>
-            <div class="section-kicker">Troubleshooting</div>
-            <h2 id="troubleshooting-title">Common Fixes</h2>
-          </div>
-          <p class="section-lede">
-            Most issues are either a missing TMDB token, an invalid provider URL, or a provider page that
-            fails to load inside the embedded web view.
-          </p>
+          <div class="kicker">Fixes</div>
+          <h2>Common Problems</h2>
         </div>
 
         <div class="grid two">
           <article class="card">
-            <h3>TMDB rows do not load</h3>
+            <h3>Nothing loads</h3>
             <p>
-              Reopen Settings, confirm the token is the API Read Access Token, and paste it without extra
-              whitespace. If the app says authentication failed, generate or copy the token again from TMDB.
+              Check that your TMDB Read Access Token is pasted correctly in Settings.
+              It should be the long token from TMDB, not your TMDB password.
             </p>
           </article>
+
           <article class="card">
-            <h3>Play button cannot open a title</h3>
+            <h3>Play does not work</h3>
             <p>
-              Add a provider URL in Settings. NightFlix builds playback URLs from that base URL and the
-              selected TMDB title, season, and episode information.
+              Add a safe movie source in Settings. If the source looks suspicious or redirects,
+              remove it and use a trusted one.
             </p>
           </article>
+
           <article class="card">
-            <h3>Provider page fails to load</h3>
+            <h3>Information looks old</h3>
             <p>
-              Confirm the provider is online, supports HTTPS, and allows embedded loading. If it redirects
-              to suspicious pages, remove it and choose a safer provider.
+              Clear the saved TMDB information in Settings. NightFlix will download fresh information when needed.
             </p>
           </article>
+
           <article class="card">
-            <h3>Old metadata appears</h3>
+            <h3>You want to start over</h3>
             <p>
-              Use the cache controls in Settings to clear cached TMDB data. NightFlix will download fresh
-              metadata the next time it needs that endpoint.
+              Use the reset option in Settings to remove your saved TMDB token and movie source from this device.
             </p>
           </article>
         </div>
+
+        <aside class="callout" style="margin-top: 14px;">
+          <h3>Your setup stays on your device</h3>
+          <p>
+            NightFlix saves your token and movie source locally so you do not have to type them every time.
+            Still, treat your TMDB token like private information.
+          </p>
+        </aside>
       </div>
     </section>
 
-    <section class="section" id="developer-notes" aria-labelledby="developer-notes-title">
+    <section class="section">
       <div class="section-inner">
         <div class="section-heading">
-          <div>
-            <div class="section-kicker">Developer Notes</div>
-            <h2 id="developer-notes-title">How the Pieces Fit</h2>
-          </div>
-          <p class="section-lede">
-            These notes are for anyone extending the app or reviewing the provider and credential flow.
+          <div class="kicker">Credit</div>
+          <h2>About TMDB</h2>
+          <p class="lead">
+            This product uses the TMDB API but is not endorsed or certified by TMDB.
+            TMDB provides movie and TV information; it does not provide the movie source you choose for playback.
           </p>
-        </div>
-
-        <div class="source-flow" aria-label="NightFlix data flow">
-          <div class="flow-node">
-            <small>1. Setup</small>
-            <strong>User enters token</strong>
-            <p>The token and provider URL are normalized before being saved to app settings.</p>
-          </div>
-          <div class="flow-node">
-            <small>2. Metadata</small>
-            <strong>TMDBService</strong>
-            <p>Requests call <code>api.themoviedb.org</code> with <code>Authorization: Bearer</code>.</p>
-          </div>
-          <div class="flow-node">
-            <small>3. UI</small>
-            <strong>SwiftUI screens</strong>
-            <p>Home, search, category, detail, list, and settings views consume TMDB models.</p>
-          </div>
-          <div class="flow-node">
-            <small>4. Playback</small>
-            <strong>URL builder</strong>
-            <p>The provider base URL is combined with an embed route for the chosen title.</p>
-          </div>
-          <div class="flow-node">
-            <small>5. Web view</small>
-            <strong>PlayerView</strong>
-            <p>The generated URL opens in the embedded player with load and error states.</p>
-          </div>
-        </div>
-
-        <div class="grid two" style="margin-top: 14px;">
-          <article class="card">
-            <h3>Generated provider routes</h3>
-            <p>Movie route:</p>
-            <pre><code>/embed/movie/{tmdbId}?color=e50914&amp;autoPlay=true&amp;nextEpisode=true&amp;episodeSelector=true</code></pre>
-            <p>TV route:</p>
-            <pre><code>/embed/tv/{tmdbId}/{season}/{episode}?color=e50914&amp;autoPlay=true&amp;nextEpisode=true&amp;episodeSelector=true</code></pre>
-          </article>
-
-          <article class="card">
-            <h3>Files worth knowing</h3>
-            <p>
-              <code>TMDBConfig.swift</code> stores TMDB image bases and credential checks.
-              <code>TMDBService.swift</code> performs metadata requests and caching.
-              <code>NightFlixStyle.swift</code> includes settings normalization and the provider URL builder.
-              <code>PlayerView.swift</code> loads the final embedded URL.
-            </p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="credits" aria-labelledby="credits-title">
-      <div class="section-inner">
-        <div class="section-heading">
-          <div>
-            <div class="section-kicker">Credits</div>
-            <h2 id="credits-title">Attribution and References</h2>
-          </div>
-          <p class="section-lede">
-            Keep attribution visible anywhere TMDB data or images are presented to users.
+          <p class="small">
+            Helpful links:
+            <a href="https://developer.themoviedb.org/">TMDB docs</a>,
+            <a href="https://developer.themoviedb.org/v4/docs/authentication-application">TMDB token guide</a>,
+            and <a href="https://www.themoviedb.org/api-terms-of-use">TMDB terms</a>.
           </p>
-        </div>
-
-        <div class="grid two">
-          <article class="card">
-            <h3>TMDB notice</h3>
-            <p>
-              This product uses the TMDB API but is not endorsed or certified by TMDB.
-              Review TMDB's current attribution, branding, and API terms before release.
-            </p>
-          </article>
-          <article class="card">
-            <h3>Helpful links</h3>
-            <p>
-              <a href="https://developer.themoviedb.org/">TMDB API docs</a>,
-              <a href="https://developer.themoviedb.org/v4/docs/authentication-application">TMDB application authentication</a>,
-              <a href="https://developer.themoviedb.org/docs/faq">TMDB API FAQ</a>,
-              and <a href="https://www.themoviedb.org/api-terms-of-use">TMDB API Terms of Use</a>.
-            </p>
-          </article>
         </div>
       </div>
     </section>
   </main>
 
   <footer class="footer">
-    <strong>NightFlix Wiki.</strong> Last updated for the local project structure in this repository.
-    Keep provider guidance conservative: metadata can come from TMDB, but playback sources must be lawful,
-    permissioned, and safe for users.
+    NightFlix Help. Keep your TMDB token private and use only lawful, trusted movie sources.
   </footer>
 </body>
 </html>
