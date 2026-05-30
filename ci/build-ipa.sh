@@ -54,6 +54,24 @@ PLIST
 
 write_export_options
 
+package_archive_as_ipa() {
+  local app_path="$ARCHIVE_PATH/Products/Applications/$PRODUCT_NAME.app"
+  local payload_dir="$BUILD_ROOT/Payload"
+  local target_ipa_path="$EXPORT_PATH/$IPA_NAME"
+
+  if [[ ! -d "$app_path" ]]; then
+    echo "::error::Archive exists, but $app_path was not found."
+    return 1
+  fi
+
+  rm -rf "$payload_dir" "$target_ipa_path"
+  mkdir -p "$payload_dir"
+  ditto "$app_path" "$payload_dir/$PRODUCT_NAME.app"
+  ditto -c -k --keepParent "$payload_dir" "$target_ipa_path"
+
+  echo "IPA packaged from signed archive app at $target_ipa_path"
+}
+
 archive_args=(
   archive
   -project "$PROJECT"
@@ -81,17 +99,24 @@ archive_args+=(
 )
 
 xcodebuild "${archive_args[@]}"
-xcodebuild \
-  -exportArchive \
-  -archivePath "$ARCHIVE_PATH" \
-  -exportPath "$EXPORT_PATH" \
-  -exportOptionsPlist "$EXPORT_OPTIONS_PLIST" \
-  -allowProvisioningUpdates
+
+if [[ "$EXPORT_METHOD" == "debugging" ]]; then
+  package_archive_as_ipa
+else
+  if ! xcodebuild \
+    -exportArchive \
+    -archivePath "$ARCHIVE_PATH" \
+    -exportPath "$EXPORT_PATH" \
+    -exportOptionsPlist "$EXPORT_OPTIONS_PLIST" \
+    -allowProvisioningUpdates; then
+    exit 1
+  fi
+fi
 
 ipa_path="$(find "$EXPORT_PATH" -maxdepth 1 -type f -name "*.ipa" -print -quit)"
 
 if [[ -z "$ipa_path" ]]; then
-  echo "::error::xcodebuild completed but no IPA was produced in $EXPORT_PATH."
+  echo "::error::No IPA was produced in $EXPORT_PATH."
   exit 1
 fi
 

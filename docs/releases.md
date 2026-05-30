@@ -25,6 +25,8 @@ Optional repository variables:
 
 The build script also accepts older export method names and maps `ad-hoc` to `release-testing`, `development` to `debugging`, and `app-store` to `app-store-connect`.
 
+For `debugging` exports, the script archives the app and then packages the signed archived `.app` into an IPA directly. Distribution exports such as `release-testing` still use `xcodebuild -exportArchive`.
+
 On macOS, you can encode files for secrets with:
 
 ```bash
