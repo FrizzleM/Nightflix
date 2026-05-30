@@ -78,6 +78,9 @@ struct MainTabView: View {
                 onDonate: {
                     openDonate()
                 },
+                onDiscord: {
+                    openDiscord()
+                },
                 onDismiss: {
                     dismissHomeMenu()
                 }
@@ -267,6 +270,20 @@ struct MainTabView: View {
         setHomeMenuVisible(false)
 
         guard let url = URL(string: "https://ko-fi.com/frizzlem") else {
+            HapticManager.shared.error()
+            return
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + homeMenuNavigationDelay) {
+            openURL(url)
+        }
+    }
+
+    private func openDiscord() {
+        HapticManager.shared.lightImpact()
+        setHomeMenuVisible(false)
+
+        guard let url = URL(string: "https://discord.gg/sjBcHXhS4") else {
             HapticManager.shared.error()
             return
         }

@@ -30,13 +30,15 @@ struct AboutView: View {
                                 .nightflixEntrance(isVisible: entranceVisible, delay: 0.35, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
                             externalLink(title: "Ko-fi", systemImage: "cup.and.saucer.fill", url: "https://ko-fi.com/frizzlem")
                                 .nightflixEntrance(isVisible: entranceVisible, delay: 0.41, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
-                            settingsLink
+                            externalLink(title: "Join my Discord", systemImage: "bubble.left.and.bubble.right.fill", url: "https://discord.gg/sjBcHXhS4")
                                 .nightflixEntrance(isVisible: entranceVisible, delay: 0.47, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
+                            settingsLink
+                                .nightflixEntrance(isVisible: entranceVisible, delay: 0.53, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
                         }
                         .padding(.horizontal, 20)
 
                         appVersionFooter
-                            .nightflixEntrance(isVisible: entranceVisible, delay: 0.53, yOffset: 8, animationsEnabled: aboutAnimationsEnabled)
+                            .nightflixEntrance(isVisible: entranceVisible, delay: 0.59, yOffset: 8, animationsEnabled: aboutAnimationsEnabled)
                             .padding(.horizontal, 20)
                             .padding(.bottom, 108)
                     }

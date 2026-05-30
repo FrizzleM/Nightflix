@@ -9,7 +9,7 @@ enum HomeMenuDestination: String, Identifiable {
 }
 
 struct HomeMenuSheet: View {
-    private let itemCount = 5
+    private let itemCount = 6
     private let itemStaggerDelay = 0.055
     private let itemAnimationCompletionPadding = 0.18
     private let backdropAnimationDuration = 0.24
@@ -20,6 +20,7 @@ struct HomeMenuSheet: View {
     let onCategories: () -> Void
     let onSettings: () -> Void
     let onDonate: () -> Void
+    let onDiscord: () -> Void
     let onDismiss: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
@@ -56,7 +57,8 @@ struct HomeMenuSheet: View {
                         onMyList: onMyList,
                         onCategories: onCategories,
                         onSettings: onSettings,
-                        onDonate: onDonate
+                        onDonate: onDonate,
+                        onDiscord: onDiscord
                     )
                 }
             }
@@ -160,6 +162,8 @@ struct HomeMenuSheet: View {
 }
 
 private struct HomeMenuButtonCluster: View {
+    private let itemCount = 6
+
     let safeTop: CGFloat
     let safeBottom: CGFloat
     let maxButtonWidth: CGFloat
@@ -170,6 +174,7 @@ private struct HomeMenuButtonCluster: View {
     let onCategories: () -> Void
     let onSettings: () -> Void
     let onDonate: () -> Void
+    let onDiscord: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var visibleItems = Set<Int>()
@@ -187,8 +192,10 @@ private struct HomeMenuButtonCluster: View {
                 .menuItemEntrance(isVisible: isItemVisible(2), index: 2)
             menuButton(title: "Donate", systemImage: "cup.and.saucer.fill", trailingSystemImage: "arrow.up.right", action: onDonate)
                 .menuItemEntrance(isVisible: isItemVisible(3), index: 3)
-            menuButton(title: "Settings", systemImage: "gearshape.fill", isProminent: true, action: onSettings)
+            menuButton(title: "Join my Discord", systemImage: "bubble.left.and.bubble.right.fill", trailingSystemImage: "arrow.up.right", action: onDiscord)
                 .menuItemEntrance(isVisible: isItemVisible(4), index: 4)
+            menuButton(title: "Settings", systemImage: "gearshape.fill", isProminent: true, action: onSettings)
+                .menuItemEntrance(isVisible: isItemVisible(5), index: 5)
         }
         .frame(maxWidth: maxButtonWidth)
         .padding(.top, safeTop + 24)
@@ -369,11 +376,11 @@ private struct HomeMenuButtonCluster: View {
         visibleItems = []
 
         guard animationsEnabled else {
-            visibleItems = Set(0...4)
+            visibleItems = Set(0..<itemCount)
             return
         }
 
-        for index in 0...4 {
+        for index in 0..<itemCount {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.055) {
                 guard itemAnimationCycle == cycle else { return }
 
@@ -390,8 +397,8 @@ private struct HomeMenuButtonCluster: View {
             return
         }
 
-        for index in (0...4).reversed() {
-            let delay = Double(4 - index) * 0.055
+        for index in (0..<itemCount).reversed() {
+            let delay = Double(itemCount - 1 - index) * 0.055
 
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 guard itemAnimationCycle == cycle else { return }
