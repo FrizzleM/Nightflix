@@ -49,7 +49,6 @@ jobs:
 
           echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
           echo "ipa_name=NightFlix-${tag_name}.ipa" >> "$GITHUB_OUTPUT"
-          echo "release_title=NightFlix Nightly ${run_date} (${short_sha})" >> "$GITHUB_OUTPUT"
 
       - name: Import iOS signing assets
         shell: bash
@@ -102,22 +101,16 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TITLE: ${{ steps.nightly.outputs.release_title }}
           TAG_NAME: ${{ steps.nightly.outputs.tag_name }}
         run: |
           set -euo pipefail
 
           notes_file="$RUNNER_TEMP/nightly-release-notes.md"
-
-          {
-            echo "Nightly NightFlix IPA from \`$GITHUB_SHA\`."
-            echo
-            echo "This is a prerelease build and may include unfinished changes."
-          } > "$notes_file"
+          : > "$notes_file"
 
           if gh release view "$TAG_NAME" > /dev/null 2>&1; then
-            gh release edit "$TAG_NAME" --title "$RELEASE_TITLE" --notes-file "$notes_file" --prerelease
+            gh release edit "$TAG_NAME" --title "$TAG_NAME" --notes-file "$notes_file" --prerelease
             gh release upload "$TAG_NAME" dist/* --clobber
           else
-            gh release create "$TAG_NAME" dist/* --title "$RELEASE_TITLE" --notes-file "$notes_file" --prerelease
+            gh release create "$TAG_NAME" dist/* --title "$TAG_NAME" --notes-file "$notes_file" --prerelease
           fi
