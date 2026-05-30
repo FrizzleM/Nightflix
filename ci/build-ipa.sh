@@ -29,32 +29,7 @@ mkdir -p "$BUILD_ROOT" "$EXPORT_PATH"
 rm -f "$EXPORT_PATH"/*.ipa "$EXPORT_PATH"/*.dSYM.zip
 
 write_export_options() {
-  if [[ -n "${PROVISIONING_PROFILE_NAME:-}" ]]; then
-    : "${DEVELOPMENT_TEAM:?DEVELOPMENT_TEAM is required when PROVISIONING_PROFILE_NAME is set.}"
-
-    cat > "$EXPORT_OPTIONS_PLIST" << PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>destination</key>
-	<string>export</string>
-	<key>method</key>
-	<string>$EXPORT_METHOD</string>
-	<key>provisioningProfiles</key>
-	<dict>
-		<key>$BUNDLE_IDENTIFIER</key>
-		<string>$PROVISIONING_PROFILE_NAME</string>
-	</dict>
-	<key>signingStyle</key>
-	<string>manual</string>
-	<key>teamID</key>
-	<string>$DEVELOPMENT_TEAM</string>
-</dict>
-</plist>
-PLIST
-  else
-    cat > "$EXPORT_OPTIONS_PLIST" << PLIST
+  cat > "$EXPORT_OPTIONS_PLIST" << PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -68,7 +43,6 @@ PLIST
 </dict>
 </plist>
 PLIST
-  fi
 }
 
 write_export_options
@@ -94,14 +68,10 @@ if [[ -n "${MARKETING_VERSION:-}" ]]; then
   archive_args+=("MARKETING_VERSION=$MARKETING_VERSION")
 fi
 
-if [[ -n "${PROVISIONING_PROFILE_NAME:-}" ]]; then
-  archive_args+=(
-    "CODE_SIGN_STYLE=Manual"
-    "PROVISIONING_PROFILE_SPECIFIER=$PROVISIONING_PROFILE_NAME"
-  )
-else
-  archive_args+=(-allowProvisioningUpdates)
-fi
+archive_args+=(
+  "CODE_SIGN_STYLE=Automatic"
+  -allowProvisioningUpdates
+)
 
 xcodebuild "${archive_args[@]}"
 xcodebuild \
