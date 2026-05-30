@@ -178,6 +178,7 @@ struct MediaSearchBar: View {
 private extension View {
     @ViewBuilder
     func nightFlixSearchBarGlass() -> some View {
+        #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
             self.glassEffect(
                 .regular.tint(.black.opacity(0.12)).interactive(),
@@ -186,6 +187,9 @@ private extension View {
         } else {
             self.background(NightFlixStyle.fieldColor, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
+        #else
+        self.background(NightFlixStyle.fieldColor, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        #endif
     }
 }
 

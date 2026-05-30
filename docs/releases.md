@@ -21,7 +21,7 @@ Optional repository variables:
 - `IOS_DEVELOPMENT_TEAM`: overrides the team ID parsed from the provisioning profile.
 - `IOS_STABLE_EXPORT_METHOD`: defaults to `release-testing`.
 - `IOS_NIGHTLY_EXPORT_METHOD`: defaults to `release-testing`.
-- `XCODE_APP`: selects a specific installed Xcode app as it appears under `/Applications`.
+- `XCODE_APP`: selects a specific installed Xcode app as it appears under `/Applications`. Defaults to `Xcode_26.5.app` on the `macos-26` runner.
 
 The build script also accepts older export method names and maps `ad-hoc` to `release-testing`, `development` to `debugging`, and `app-store` to `app-store-connect`.
 
