@@ -80,6 +80,7 @@ mkdir -p "$profile_dir"
 cp "$profile_path" "$profile_dir/$profile_uuid.mobileprovision"
 
 emit_env PROVISIONING_PROFILE_NAME "$profile_name"
+emit_env PROVISIONING_PROFILE_UUID "$profile_uuid"
 emit_env DEVELOPMENT_TEAM "${IOS_DEVELOPMENT_TEAM:-$profile_team_id}"
 
 echo "Imported provisioning profile: $profile_name"

@@ -12,6 +12,15 @@ ARCHIVE_PATH="${ARCHIVE_PATH:-$BUILD_ROOT/$PRODUCT_NAME.xcarchive}"
 EXPORT_PATH="${EXPORT_PATH:-$PWD/dist}"
 EXPORT_OPTIONS_PLIST="${EXPORT_OPTIONS_PLIST:-$BUILD_ROOT/ExportOptions.plist}"
 IPA_NAME="${IPA_NAME:-$PRODUCT_NAME.ipa}"
+SIGNING_STYLE="automatic"
+
+if [[ -n "${PROVISIONING_PROFILE_SPECIFIER:-}" ]]; then
+  PROVISIONING_PROFILE_NAME="$PROVISIONING_PROFILE_SPECIFIER"
+fi
+
+if [[ -n "${PROVISIONING_PROFILE_NAME:-}" || -n "${PROVISIONING_PROFILE_UUID:-}" ]]; then
+  SIGNING_STYLE="manual"
+fi
 
 case "$EXPORT_METHOD" in
   ad-hoc)
@@ -30,9 +39,21 @@ rm -f "$EXPORT_PATH"/*.ipa "$EXPORT_PATH"/*.dSYM.zip
 
 write_export_options() {
   local team_id_entry=""
+  local provisioning_profiles_entry=""
 
   if [[ -n "${DEVELOPMENT_TEAM:-}" ]]; then
     team_id_entry=$'	<key>teamID</key>\n	<string>'"$DEVELOPMENT_TEAM"$'</string>\n'
+  fi
+
+  if [[ "$SIGNING_STYLE" == "manual" ]]; then
+    local profile_specifier="${PROVISIONING_PROFILE_NAME:-${PROVISIONING_PROFILE_UUID:-}}"
+
+    if [[ -z "$profile_specifier" ]]; then
+      echo "::error::Manual signing requires PROVISIONING_PROFILE_NAME or PROVISIONING_PROFILE_UUID."
+      exit 1
+    fi
+
+    provisioning_profiles_entry=$'	<key>provisioningProfiles</key>\n	<dict>\n		<key>'"$BUNDLE_IDENTIFIER"$'</key>\n		<string>'"$profile_specifier"$'</string>\n	</dict>\n'
   fi
 
   cat > "$EXPORT_OPTIONS_PLIST" << PLIST
@@ -45,8 +66,9 @@ write_export_options() {
 	<key>method</key>
 	<string>$EXPORT_METHOD</string>
 	<key>signingStyle</key>
-	<string>automatic</string>
+	<string>$SIGNING_STYLE</string>
 ${team_id_entry}
+${provisioning_profiles_entry}
 </dict>
 </plist>
 PLIST
@@ -93,22 +115,38 @@ if [[ -n "${MARKETING_VERSION:-}" ]]; then
   archive_args+=("MARKETING_VERSION=$MARKETING_VERSION")
 fi
 
-archive_args+=(
-  "CODE_SIGN_STYLE=Automatic"
-  -allowProvisioningUpdates
-)
+if [[ "$SIGNING_STYLE" == "manual" ]]; then
+  archive_args+=("CODE_SIGN_STYLE=Manual")
+
+  if [[ -n "${PROVISIONING_PROFILE_NAME:-}" ]]; then
+    archive_args+=("PROVISIONING_PROFILE_SPECIFIER=$PROVISIONING_PROFILE_NAME")
+  elif [[ -n "${PROVISIONING_PROFILE_UUID:-}" ]]; then
+    archive_args+=("PROVISIONING_PROFILE=$PROVISIONING_PROFILE_UUID")
+  fi
+else
+  archive_args+=(
+    "CODE_SIGN_STYLE=Automatic"
+    -allowProvisioningUpdates
+  )
+fi
 
 xcodebuild "${archive_args[@]}"
 
 if [[ "$EXPORT_METHOD" == "debugging" ]]; then
   package_archive_as_ipa
 else
-  if ! xcodebuild \
-    -exportArchive \
-    -archivePath "$ARCHIVE_PATH" \
-    -exportPath "$EXPORT_PATH" \
-    -exportOptionsPlist "$EXPORT_OPTIONS_PLIST" \
-    -allowProvisioningUpdates; then
+  export_args=(
+    -exportArchive
+    -archivePath "$ARCHIVE_PATH"
+    -exportPath "$EXPORT_PATH"
+    -exportOptionsPlist "$EXPORT_OPTIONS_PLIST"
+  )
+
+  if [[ "$SIGNING_STYLE" == "automatic" ]]; then
+    export_args+=(-allowProvisioningUpdates)
+  fi
+
+  if ! xcodebuild "${export_args[@]}"; then
     exit 1
   fi
 fi

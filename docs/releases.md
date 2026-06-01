@@ -19,13 +19,13 @@ Configure these repository secrets before running either workflow:
 Optional repository variables:
 
 - `IOS_DEVELOPMENT_TEAM`: overrides the team ID parsed from the provisioning profile.
-- `IOS_STABLE_EXPORT_METHOD`: defaults to `debugging`, which works with an Xcode-managed iOS Team Provisioning Profile. Set this to `release-testing` when you provide an Ad Hoc distribution profile.
-- `IOS_NIGHTLY_EXPORT_METHOD`: defaults to `debugging`, which works with an Xcode-managed iOS Team Provisioning Profile. Set this to `release-testing` when you provide an Ad Hoc distribution profile.
+- `IOS_STABLE_EXPORT_METHOD`: defaults to `debugging`, which works with an imported Xcode-managed iOS Team Provisioning Profile. Set this to `release-testing` when you provide an Ad Hoc distribution profile.
+- `IOS_NIGHTLY_EXPORT_METHOD`: defaults to `debugging`, which works with an imported Xcode-managed iOS Team Provisioning Profile. Set this to `release-testing` when you provide an Ad Hoc distribution profile.
 - `XCODE_APP`: selects a specific installed Xcode app as it appears under `/Applications`. Defaults to `Xcode_26.5.app` on the `macos-26` runner.
 
 The build script also accepts older export method names and maps `ad-hoc` to `release-testing`, `development` to `debugging`, and `app-store` to `app-store-connect`.
 
-For `debugging` exports, the script archives the app and then packages the signed archived `.app` into an IPA directly. Distribution exports such as `release-testing` still use `xcodebuild -exportArchive`.
+When the signing import step provides a provisioning profile, the build script archives with manual signing so GitHub Actions does not need an Apple account configured in Xcode. For `debugging` exports, the script archives the app and then packages the signed archived `.app` into an IPA directly. Distribution exports such as `release-testing` still use `xcodebuild -exportArchive`.
 
 On macOS, you can encode files for secrets with:
 
