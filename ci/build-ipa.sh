@@ -13,6 +13,7 @@ EXPORT_PATH="${EXPORT_PATH:-$PWD/dist}"
 EXPORT_OPTIONS_PLIST="${EXPORT_OPTIONS_PLIST:-$BUILD_ROOT/ExportOptions.plist}"
 IPA_NAME="${IPA_NAME:-$PRODUCT_NAME.ipa}"
 SIGNING_STYLE="automatic"
+PROFILE_IDENTIFIER=""
 
 if [[ -n "${PROVISIONING_PROFILE_SPECIFIER:-}" ]]; then
   PROVISIONING_PROFILE_NAME="$PROVISIONING_PROFILE_SPECIFIER"
@@ -20,6 +21,7 @@ fi
 
 if [[ -n "${PROVISIONING_PROFILE_NAME:-}" || -n "${PROVISIONING_PROFILE_UUID:-}" ]]; then
   SIGNING_STYLE="manual"
+  PROFILE_IDENTIFIER="${PROVISIONING_PROFILE_UUID:-${PROVISIONING_PROFILE_NAME:-}}"
 fi
 
 case "$EXPORT_METHOD" in
@@ -46,14 +48,12 @@ write_export_options() {
   fi
 
   if [[ "$SIGNING_STYLE" == "manual" ]]; then
-    local profile_specifier="${PROVISIONING_PROFILE_NAME:-${PROVISIONING_PROFILE_UUID:-}}"
-
-    if [[ -z "$profile_specifier" ]]; then
+    if [[ -z "$PROFILE_IDENTIFIER" ]]; then
       echo "::error::Manual signing requires PROVISIONING_PROFILE_NAME or PROVISIONING_PROFILE_UUID."
       exit 1
     fi
 
-    provisioning_profiles_entry=$'	<key>provisioningProfiles</key>\n	<dict>\n		<key>'"$BUNDLE_IDENTIFIER"$'</key>\n		<string>'"$profile_specifier"$'</string>\n	</dict>\n'
+    provisioning_profiles_entry=$'	<key>provisioningProfiles</key>\n	<dict>\n		<key>'"$BUNDLE_IDENTIFIER"$'</key>\n		<string>'"$PROFILE_IDENTIFIER"$'</string>\n	</dict>\n'
   fi
 
   cat > "$EXPORT_OPTIONS_PLIST" << PLIST
@@ -118,10 +118,10 @@ fi
 if [[ "$SIGNING_STYLE" == "manual" ]]; then
   archive_args+=("CODE_SIGN_STYLE=Manual")
 
-  if [[ -n "${PROVISIONING_PROFILE_NAME:-}" ]]; then
-    archive_args+=("PROVISIONING_PROFILE_SPECIFIER=$PROVISIONING_PROFILE_NAME")
-  elif [[ -n "${PROVISIONING_PROFILE_UUID:-}" ]]; then
+  if [[ -n "${PROVISIONING_PROFILE_UUID:-}" ]]; then
     archive_args+=("PROVISIONING_PROFILE=$PROVISIONING_PROFILE_UUID")
+  elif [[ -n "${PROVISIONING_PROFILE_NAME:-}" ]]; then
+    archive_args+=("PROVISIONING_PROFILE_SPECIFIER=$PROVISIONING_PROFILE_NAME")
   fi
 else
   archive_args+=(
