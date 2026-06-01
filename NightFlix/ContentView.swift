@@ -154,7 +154,8 @@ private struct InitialSetupView: View {
     private var tmdbPage: some View {
         setupPage(
             systemImage: "key.fill",
-            title: "Add your TMDB token"
+            title: "Add your TMDB token",
+            wikiURL: Self.tmdbKeyWikiURL
         ) {
             inputContainer {
                 SecureField("TMDB Read Access Token", text: $tmdbCredentialDraft)
@@ -189,7 +190,8 @@ private struct InitialSetupView: View {
     private var providerPage: some View {
         setupPage(
             systemImage: "play.rectangle.fill",
-            title: "Add your provider"
+            title: "Add your provider",
+            wikiURL: Self.sourcesWikiURL
         ) {
             inputContainer {
                 TextField("Enter your provider", text: $providerBaseURLDraft)
@@ -244,6 +246,7 @@ private struct InitialSetupView: View {
         systemImage: String,
         title: String,
         message: String? = nil,
+        wikiURL: URL? = nil,
         @ViewBuilder content: () -> Content,
         @ViewBuilder actions: () -> Actions
     ) -> some View {
@@ -277,8 +280,34 @@ private struct InitialSetupView: View {
 
             actions()
                 .padding(.top, 8)
+
+            if let wikiURL {
+                wikiHelpLink(destination: wikiURL)
+                    .padding(.top, 2)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func wikiHelpLink(destination: URL) -> some View {
+        Link(destination: destination) {
+            HStack(spacing: 5) {
+                Text("Need help? Read the")
+                    .foregroundStyle(.white.opacity(0.58))
+
+                Text("wiki")
+                    .foregroundStyle(NightFlixStyle.accentColor)
+
+                Image(systemName: "arrow.up.right")
+                    .font(.caption2.weight(.black))
+                    .foregroundStyle(NightFlixStyle.accentColor)
+            }
+            .font(.footnote.weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Need help? Read the wiki")
     }
 
     private func inputContainer<Content: View>(@ViewBuilder content: () -> Content) -> some View {
@@ -402,6 +431,9 @@ private struct InitialSetupView: View {
         HapticManager.shared.lightImpact()
         openURL(url)
     }
+
+    private static let tmdbKeyWikiURL = URL(string: "https://github.com/FrizzleM/Nightflix/wiki/Setting-up-a-TMDB-key")!
+    private static let sourcesWikiURL = URL(string: "https://github.com/FrizzleM/Nightflix/wiki/Sources")!
 }
 
 private enum SetupStep: Int, CaseIterable, Identifiable, Hashable {
