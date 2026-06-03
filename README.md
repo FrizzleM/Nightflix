@@ -8,6 +8,10 @@
   <i>New here? Read the <a href="https://github.com/FrizzleM/Nightflix/wiki">wiki</a></i>
 </p>
 
+<p align="center">
+  Download the <a href="https://github.com/FrizzleM/Nightflix/releases/latest?utm_source=chatgpt.com">latest release</a>
+</p>
+
 ### Nightflix is an iPhone and iPad app to stream movies and series for free, with a smooth interface.
 
 The app uses TMDB to show movie and series information, such as titles, posters, trending content, popular releases, top-rated items, descriptions, and search results. When you add your own streaming provider, Nightflix can open that provider's player for a selected movie or episode, if the provider has it available.
