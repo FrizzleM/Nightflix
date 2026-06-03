@@ -1,0 +1,43 @@
+{
+  "name": "Frizzle's repo",
+  "subtitle": "",
+  "description": "",
+  "iconURL": "https://files.catbox.moe/god4p6.jpeg",
+  "website": "https://guns.lol/frizzle",
+  "patreonURL": "",
+  "tintColor": "#6156e2",
+  "featuredApps": [
+    "FrizzleM.NightFlix"
+  ],
+  "apps": [
+    {
+      "name": "NightFlix",
+      "bundleIdentifier": "FrizzleM.NightFlix",
+      "marketplaceID": "",
+      "developerName": "Frizzle",
+      "subtitle": "An iOS movie and series streaming app",
+      "localizedDescription": "Nightflix is an iPhone and iPad app to stream movies and series for free, with a smooth interface.\n\nThe app uses TMDB to show movie and series information, such as titles, posters, trending content, popular releases, top-rated items, descriptions, and search results. When you add your own streaming provider, Nightflix can open that provider's player for a selected movie or episode, if the provider has it available.",
+      "iconURL": "https://i.imgur.com/qamOWFh.png",
+      "tintColor": "#b43434",
+      "category": "entertainment",
+      "screenshots": [],
+      "versions": [
+        {
+          "downloadURL": "https://github.com/FrizzleM/Nightflix/releases/download/v1.0.0/Nightflix.ipa",
+          "size": 6200000,
+          "version": "1.0.0",
+          "buildVersion": "",
+          "date": "2026-06-03T09:30:00+02:00",
+          "localizedDescription": null,
+          "minOSVersion": "17.0"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {}
+      },
+      "patreon": {}
+    }
+  ],
+  "news": []
+}
