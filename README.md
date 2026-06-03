@@ -1,20 +1,18 @@
+<div align="center">
+
 # Nightflix
 
-<p align="center">
-  <img width="250" height="250" alt="Untitled design" src="https://github.com/user-attachments/assets/eab43986-eb41-4d90-ba12-9d49dad0b555" />
-</p>
+<img width="250" height="250" alt="Nightflix logo" src="https://github.com/user-attachments/assets/eab43986-eb41-4d90-ba12-9d49dad0b555" />
 
-<p align="center">
-  <i>New here? Read the <a href="https://github.com/FrizzleM/Nightflix/wiki">wiki</a></i>
-</p>
+<i>New here? Read the <a href="https://github.com/FrizzleM/Nightflix/wiki">wiki</a></i>
 
-<p align="center">
-  Download the <a href="https://github.com/FrizzleM/Nightflix/releases/latest?utm_source=chatgpt.com">latest release</a>
-  
-  OR
-  
-  Add the <a href="https://frizzlem.github.io/Nighflix/featheradd.html">repo to Feather</a>
-</p>
+Download the <a href="https://github.com/FrizzleM/Nightflix/releases/latest">latest release</a>
+
+OR
+
+Add the <a href="https://frizzlem.github.io/Nighflix/featheradd.html">repo to Feather</a>
+
+</div>
 
 ### Nightflix is an iPhone and iPad app to stream movies and series for free, with a smooth interface.
 
