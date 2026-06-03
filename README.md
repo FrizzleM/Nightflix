@@ -11,7 +11,7 @@
 <p align="center">
   Download the <a href="https://github.com/FrizzleM/Nightflix/releases/latest?utm_source=chatgpt.com">latest release</a>
   OR
-  Add the <a href="feather://raw.githubusercontent.com/FrizzleM/Nightflix/refs/heads/main/repo.json">repo to Feather</a>
+  Add the <a href="https://frizzlem.github.io/Nighflix/featheradd.html">repo to Feather</a>
 </p>
 
 ### Nightflix is an iPhone and iPad app to stream movies and series for free, with a smooth interface.
