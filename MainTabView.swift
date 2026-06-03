@@ -12,6 +12,7 @@ struct MainTabView: View {
     @State private var continueWatchingManager = ContinueWatchingManager()
     @State private var selectedTab: AppTab = .home
     @State private var homeAnimationTrigger = 0
+    @State private var homeResetTrigger = 0
     @State private var aboutAnimationTrigger = 0
     @State private var hasPlayedNightflixTitleStartupAnimation = false
     @State private var showNightflixTitle = false
@@ -32,12 +33,13 @@ struct MainTabView: View {
 
     var body: some View {
         ZStack {
-            TabView(selection: $selectedTab) {
+            TabView(selection: selectedTabBinding) {
                 FeedView(
                     historyManager: historyManager,
                     continueWatchingManager: continueWatchingManager,
                     myListManager: myListManager,
                     animationTrigger: homeAnimationTrigger,
+                    homeResetTrigger: homeResetTrigger,
                     showNightflixTitle: showNightflixTitle,
                     shouldAnimateNightflixTitle: shouldAnimateNightflixTitle,
                     startupContentAnimationReady: homeStartupContentAnimationReady,
@@ -118,6 +120,19 @@ struct MainTabView: View {
 
     private var shouldAnimateNightflixTitle: Bool {
         !hasPlayedNightflixTitleStartupAnimation && settings.animationMode != .off && !reduceMotion
+    }
+
+    private var selectedTabBinding: Binding<AppTab> {
+        Binding(
+            get: { selectedTab },
+            set: { newTab in
+                if newTab == .home {
+                    homeResetTrigger += 1
+                }
+
+                selectedTab = newTab
+            }
+        )
     }
 
     private var startupAnimationsEnabled: Bool {

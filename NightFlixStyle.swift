@@ -340,8 +340,8 @@ extension View {
         )
     }
 
-    func nightflixTitleGlow(opacity: CGFloat = 1) -> some View {
-        modifier(NightflixTitleGlowModifier(opacity: opacity))
+    func nightflixTitleGlow(opacity: CGFloat = 1, scale: CGFloat = 1, offset: CGSize = .zero) -> some View {
+        modifier(NightflixTitleGlowModifier(opacity: opacity, scale: scale, offset: offset))
     }
 
     func nightFlixInputFieldStyle() -> some View {
@@ -444,6 +444,8 @@ private struct NightflixTitleGlowModifier: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
 
     let opacity: CGFloat
+    let scale: CGFloat
+    let offset: CGSize
 
     func body(content: Content) -> some View {
         content
@@ -451,6 +453,8 @@ private struct NightflixTitleGlowModifier: ViewModifier {
                 Circle()
                     .fill(NightFlixStyle.accentColor)
                     .frame(width: 190, height: 72)
+                    .scaleEffect(scale)
+                    .offset(offset)
                     .opacity(baseOpacity * opacity)
                     .blur(radius: 36)
                     .allowsHitTesting(false)

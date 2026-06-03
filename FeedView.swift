@@ -9,6 +9,7 @@ struct FeedView: View {
     let continueWatchingManager: ContinueWatchingManager
     @ObservedObject var myListManager: MyListManager
     let animationTrigger: Int
+    let homeResetTrigger: Int
     let showNightflixTitle: Bool
     let shouldAnimateNightflixTitle: Bool
     let startupContentAnimationReady: Bool
@@ -28,6 +29,7 @@ struct FeedView: View {
     @State private var scrollOffset: CGFloat = 0
     @State private var searchShortcutRequest = 0
     @State private var searchFocusRequest = 0
+    @State private var homeResetRequest = 0
 
     var body: some View {
         NavigationStack {
@@ -93,6 +95,9 @@ struct FeedView: View {
                         .onChange(of: searchShortcutRequest) { _, _ in
                             scrollToSearchBar(with: scrollProxy)
                         }
+                        .onChange(of: homeResetRequest) { _, _ in
+                            resetToInitialHomeScreen(with: scrollProxy)
+                        }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -104,6 +109,7 @@ struct FeedView: View {
                         showMenuButton: showContent,
                         showSearchShortcut: shouldShowSearchShortcut(topSafeArea: geometry.safeAreaInsets.top),
                         animationsEnabled: contentAnimationsEnabled,
+                        onHomeTitle: requestHomeReset,
                         onSearchShortcut: requestSearchBarScroll,
                         onOpenMenu: onOpenHomeMenu
                     )
@@ -164,6 +170,9 @@ struct FeedView: View {
         }
         .onChange(of: animationTrigger) { _, _ in
             replayHomeContentAnimationIfNeeded()
+        }
+        .onChange(of: homeResetTrigger) { _, _ in
+            requestHomeReset()
         }
         .onChange(of: reduceMotion) { _, _ in
             keepContentVisible()
@@ -436,6 +445,10 @@ struct FeedView: View {
         searchShortcutRequest += 1
     }
 
+    private func requestHomeReset() {
+        homeResetRequest += 1
+    }
+
     private func scrollToSearchBar(with proxy: ScrollViewProxy) {
         HapticManager.shared.selection()
 
@@ -449,6 +462,24 @@ struct FeedView: View {
             proxy.scrollTo(homeTopAnchorId, anchor: .top)
         }
         focusSearchBar(after: .milliseconds(360))
+    }
+
+    private func resetToInitialHomeScreen(with proxy: ScrollViewProxy) {
+        playErrorMessage = nil
+        selectedItem = nil
+        selectedSeries = nil
+        selectedDetailItem = nil
+        selectedHomeMenuDestination = nil
+        searchViewModel.clearSearch()
+
+        guard contentAnimationsEnabled else {
+            proxy.scrollTo(homeTopAnchorId, anchor: .top)
+            return
+        }
+
+        withAnimation(.easeInOut(duration: 0.32)) {
+            proxy.scrollTo(homeTopAnchorId, anchor: .top)
+        }
     }
 
     private func focusSearchBar(after delay: Duration) {
@@ -623,6 +654,7 @@ private extension View {
         continueWatchingManager: ContinueWatchingManager(),
         myListManager: MyListManager(),
         animationTrigger: 0,
+        homeResetTrigger: 0,
         showNightflixTitle: true,
         shouldAnimateNightflixTitle: false,
         startupContentAnimationReady: true,

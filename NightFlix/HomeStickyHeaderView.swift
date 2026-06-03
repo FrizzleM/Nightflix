@@ -11,12 +11,17 @@ struct HomeStickyHeaderView: View {
     let showMenuButton: Bool
     let showSearchShortcut: Bool
     let animationsEnabled: Bool
+    let onHomeTitle: () -> Void
     let onSearchShortcut: () -> Void
     let onOpenMenu: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
     @State private var isTitleGlowVisible = true
+    @State private var isTitlePressed = false
+    @State private var titleGlowOffset: CGSize = .zero
+    @State private var titlePressStartedAt: Date?
+    @State private var titlePressMaximumDistance: CGFloat = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -75,9 +80,19 @@ struct HomeStickyHeaderView: View {
             .foregroundStyle(NightFlixStyle.accentColor)
             .lineLimit(1)
             .minimumScaleFactor(0.68)
-            .nightflixTitleGlow(opacity: titleGlowOpacity)
+            .nightflixTitleGlow(opacity: titleGlowOpacity, scale: titleGlowScale, offset: titleGlowOffset)
             .shadow(color: NightFlixStyle.titleGlowColor.opacity(titleGlowOpacity), radius: titleGlowRadius)
             .shadow(color: NightFlixStyle.titleSecondaryGlowColor.opacity(titleGlowOpacity), radius: titleSecondaryGlowRadius)
+            .scaleEffect(titleScale, anchor: .leading)
+            .animation(titlePressAnimation, value: isTitlePressed)
+            .animation(titlePressAnimation, value: titleGlowOffset)
+            .contentShape(Rectangle())
+            .gesture(titlePressGesture)
+            .accessibilityLabel("Home")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction {
+                onHomeTitle()
+            }
             .nightflixEntrance(
                 isVisible: showTitle,
                 delay: 0.1,
@@ -147,6 +162,14 @@ struct HomeStickyHeaderView: View {
         38
     }
 
+    private var titleScale: CGFloat {
+        isTitlePressed ? 1.12 : 1
+    }
+
+    private var titleGlowScale: CGFloat {
+        isTitlePressed ? 1.36 : 1
+    }
+
     private var menuForegroundColor: Color {
         if colorScheme == .dark {
             return .white
@@ -173,16 +196,74 @@ struct HomeStickyHeaderView: View {
     }
 
     private var titleGlowRadius: CGFloat {
-        16
+        isTitlePressed ? 22 : 16
     }
 
     private var titleSecondaryGlowRadius: CGFloat {
-        34
+        isTitlePressed ? 46 : 34
     }
 
     private var searchShortcutAnimation: Animation? {
         guard animationsEnabled, !reduceMotion else { return nil }
         return .easeOut(duration: 0.18)
+    }
+
+    private var titlePressAnimation: Animation? {
+        guard animationsEnabled, !reduceMotion else { return nil }
+        return .interactiveSpring(response: 0.22, dampingFraction: 0.72)
+    }
+
+    private var titlePressGesture: some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .local)
+            .onChanged { value in
+                if titlePressStartedAt == nil {
+                    titlePressStartedAt = Date()
+                    titlePressMaximumDistance = 0
+
+                    withAnimation(titlePressAnimation) {
+                        isTitlePressed = true
+                    }
+                }
+
+                titlePressMaximumDistance = max(titlePressMaximumDistance, distance(for: value.translation))
+
+                withAnimation(titlePressAnimation) {
+                    titleGlowOffset = clampedGlowOffset(for: value.translation)
+                }
+            }
+            .onEnded { value in
+                let pressDuration = Date().timeIntervalSince(titlePressStartedAt ?? Date())
+                let didTap = pressDuration < 0.28 && max(titlePressMaximumDistance, distance(for: value.translation)) < 10
+
+                titlePressStartedAt = nil
+                titlePressMaximumDistance = 0
+
+                withAnimation(titlePressAnimation) {
+                    isTitlePressed = false
+                    titleGlowOffset = .zero
+                }
+
+                if didTap {
+                    onHomeTitle()
+                }
+            }
+    }
+
+    private func clampedGlowOffset(for translation: CGSize) -> CGSize {
+        let proposedOffset = CGSize(width: translation.width * 0.48, height: translation.height * 0.48)
+        let maximumDistance: CGFloat = 24
+        let proposedDistance = distance(for: proposedOffset)
+
+        guard proposedDistance > maximumDistance else {
+            return proposedOffset
+        }
+
+        let scale = maximumDistance / proposedDistance
+        return CGSize(width: proposedOffset.width * scale, height: proposedOffset.height * scale)
+    }
+
+    private func distance(for size: CGSize) -> CGFloat {
+        sqrt(size.width * size.width + size.height * size.height)
     }
 
     private func updateTitleGlowVisibility(for progress: CGFloat, animated: Bool) {
@@ -226,6 +307,7 @@ struct HomeStickyHeaderView: View {
             showMenuButton: true,
             showSearchShortcut: true,
             animationsEnabled: true,
+            onHomeTitle: { },
             onSearchShortcut: { },
             onOpenMenu: { }
         )

@@ -34,6 +34,15 @@ final class SearchViewModel {
         scheduleSearch()
     }
 
+    func clearSearch() {
+        searchTask?.cancel()
+        query = ""
+        results = []
+        isLoading = false
+        errorMessage = nil
+        didCompleteSearch = false
+    }
+
     func scheduleSearch() {
         searchTask?.cancel()
 
