@@ -10,7 +10,9 @@
 
 <p align="center">
   Download the <a href="https://github.com/FrizzleM/Nightflix/releases/latest?utm_source=chatgpt.com">latest release</a>
+  
   OR
+  
   Add the <a href="https://frizzlem.github.io/Nighflix/featheradd.html">repo to Feather</a>
 </p>
 
