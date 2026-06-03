@@ -236,7 +236,6 @@ struct SettingsView: View {
     @State private var isShowingDeleteCacheConfirmation = false
     @State private var isShowingDeleteKeysConfirmation = false
     @State private var cacheSizeBytes = 0
-    @State private var shutdownCountdown: Int?
 
     var body: some View {
         ZStack {
@@ -258,12 +257,6 @@ struct SettingsView: View {
                 .padding(.top, 20)
                 .padding(.bottom, 130)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            if let shutdownCountdown {
-                shutdownCountdownOverlay(secondsRemaining: shutdownCountdown)
-                    .transition(.opacity)
-                    .zIndex(10)
             }
         }
         .navigationTitle("Settings")
@@ -297,87 +290,6 @@ struct SettingsView: View {
             Text("This will remove your TMDB Read Access Token and movie provider from this device. Nightflix will ask for setup again when reopened.")
         }
         .tint(NightFlixStyle.accentColor)
-    }
-
-    private func shutdownCountdownOverlay(secondsRemaining: Int) -> some View {
-        ZStack {
-            Color.black.opacity(0.38)
-                .ignoresSafeArea()
-                .background(.ultraThinMaterial)
-
-            VStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(NightFlixStyle.accentColor.opacity(0.22))
-                        .frame(width: 86, height: 86)
-                        .blur(radius: 22)
-
-                    Image(systemName: "power")
-                        .font(.system(size: 34, weight: .bold))
-                        .foregroundStyle(NightFlixStyle.accentColor)
-                        .frame(width: 58, height: 58)
-                        .background(.white.opacity(0.10), in: Circle())
-                        .overlay {
-                            Circle()
-                                .stroke(.white.opacity(0.24), lineWidth: 1)
-                        }
-                }
-
-                Text("Nightflix will close")
-                    .font(.title3.weight(.black))
-                    .foregroundStyle(.white)
-
-                Text("\(secondsRemaining)")
-                    .font(.system(size: 56, weight: .black, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.white, .white.opacity(0.72)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .shadow(color: NightFlixStyle.accentColor.opacity(0.35), radius: 18)
-
-                Text("Reopen the app from your Home Screen.")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.72))
-                    .multilineTextAlignment(.center)
-            }
-            .padding(26)
-            .frame(maxWidth: 320)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                .white.opacity(0.48),
-                                .white.opacity(0.16),
-                                NightFlixStyle.accentColor.opacity(0.26)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            }
-            .overlay(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [.white.opacity(0.24), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .center
-                        )
-                    )
-                    .frame(height: 120)
-                    .allowsHitTesting(false)
-            }
-            .shadow(color: .black.opacity(0.35), radius: 28, y: 18)
-            .padding(24)
-        }
     }
 
     private var appearanceSection: some View {
@@ -536,7 +448,7 @@ struct SettingsView: View {
 
     private var deleteHistoryButton: some View {
         Button(role: .destructive) {
-            guard shutdownCountdown == nil else { return }
+            guard !settings.isShutdownInProgress else { return }
             HapticManager.shared.warning()
             isShowingDeleteHistoryConfirmation = true
         } label: {
@@ -548,12 +460,12 @@ struct SettingsView: View {
         }
         .buttonStyle(.plain)
         .controlSize(.large)
-        .disabled(shutdownCountdown != nil)
+        .disabled(settings.isShutdownInProgress)
     }
 
     private var deleteCacheButton: some View {
         Button(role: .destructive) {
-            guard shutdownCountdown == nil else { return }
+            guard !settings.isShutdownInProgress else { return }
             HapticManager.shared.warning()
             isShowingDeleteCacheConfirmation = true
         } label: {
@@ -565,12 +477,12 @@ struct SettingsView: View {
         }
         .buttonStyle(.plain)
         .controlSize(.large)
-        .disabled(shutdownCountdown != nil)
+        .disabled(settings.isShutdownInProgress)
     }
 
     private var deleteKeysButton: some View {
         Button(role: .destructive) {
-            guard shutdownCountdown == nil else { return }
+            guard !settings.isShutdownInProgress else { return }
             HapticManager.shared.warning()
             isShowingDeleteKeysConfirmation = true
         } label: {
@@ -582,7 +494,7 @@ struct SettingsView: View {
         }
         .buttonStyle(.plain)
         .controlSize(.large)
-        .disabled(shutdownCountdown != nil)
+        .disabled(settings.isShutdownInProgress)
     }
 
     private func deleteHistory() {
@@ -606,20 +518,21 @@ struct SettingsView: View {
     }
 
     private func deleteKeys() {
-        settings.resetInitialSetupCredentials()
         HapticManager.shared.success()
-        terminateApp()
+        terminateApp {
+            settings.resetInitialSetupCredentials()
+        }
     }
 
-    private func terminateApp() {
-        guard shutdownCountdown == nil else { return }
+    private func terminateApp(afterPreparingForShutdown prepareForShutdown: () -> Void = {}) {
+        guard settings.beginShutdownCountdown() else { return }
+        prepareForShutdown()
         UserDefaults.standard.synchronize()
-        shutdownCountdown = 3
 
         Task { @MainActor in
             for secondsRemaining in stride(from: 2, through: 1, by: -1) {
                 try? await Task.sleep(for: .seconds(1))
-                shutdownCountdown = secondsRemaining
+                settings.updateShutdownCountdown(to: secondsRemaining)
             }
 
             try? await Task.sleep(for: .seconds(1))
@@ -643,6 +556,95 @@ struct SettingsView: View {
             await MainActor.run {
                 self.cacheSizeBytes = cacheSizeBytes
             }
+        }
+    }
+}
+
+struct ShutdownCountdownOverlay: View {
+    let secondsRemaining: Int
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.38)
+                .ignoresSafeArea()
+                .background(.ultraThinMaterial)
+
+            VStack(spacing: 14) {
+                powerIcon
+
+                Text("Nightflix will close")
+                    .font(.title3.weight(.black))
+                    .foregroundStyle(.white)
+
+                Text("\(secondsRemaining)")
+                    .font(.system(size: 56, weight: .black, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.white, .white.opacity(0.72)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .shadow(color: NightFlixStyle.accentColor.opacity(0.35), radius: 18)
+
+                Text("Reopen the app from your Home Screen.")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.72))
+                    .multilineTextAlignment(.center)
+            }
+            .padding(26)
+            .frame(maxWidth: 320)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                .white.opacity(0.48),
+                                .white.opacity(0.16),
+                                NightFlixStyle.accentColor.opacity(0.26)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
+            .overlay(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [.white.opacity(0.24), .clear],
+                            startPoint: .topLeading,
+                            endPoint: .center
+                        )
+                    )
+                    .frame(height: 120)
+                    .allowsHitTesting(false)
+            }
+            .shadow(color: .black.opacity(0.35), radius: 28, y: 18)
+            .padding(24)
+        }
+    }
+
+    private var powerIcon: some View {
+        ZStack {
+            Circle()
+                .fill(NightFlixStyle.accentColor.opacity(0.22))
+                .frame(width: 86, height: 86)
+                .blur(radius: 22)
+
+            Image(systemName: "power")
+                .font(.system(size: 34, weight: .bold))
+                .foregroundStyle(NightFlixStyle.accentColor)
+                .frame(width: 58, height: 58)
+                .background(.white.opacity(0.10), in: Circle())
+                .overlay {
+                    Circle()
+                        .stroke(.white.opacity(0.24), lineWidth: 1)
+                }
         }
     }
 }

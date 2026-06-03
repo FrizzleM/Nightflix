@@ -9,13 +9,21 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            if settings.hasCompletedInitialSetup {
+            if settings.isShutdownInProgress {
+                NightFlixStyle.backgroundColor.ignoresSafeArea()
+            } else if settings.hasCompletedInitialSetup {
                 MainTabView(playsStartupIntro: !suppressMainStartupIntroAfterSetup)
             } else {
                 InitialSetupView()
                     .onAppear {
                         suppressMainStartupIntroAfterSetup = true
                     }
+            }
+
+            if let shutdownCountdown = settings.shutdownCountdown {
+                ShutdownCountdownOverlay(secondsRemaining: shutdownCountdown)
+                    .transition(.opacity)
+                    .zIndex(1001)
             }
 
             if shouldShowSetupStartupAnimation {
@@ -48,7 +56,9 @@ struct ContentView: View {
     }
 
     private var shouldShowSetupStartupAnimation: Bool {
-        !settings.hasCompletedInitialSetup &&
+        guard !settings.isShutdownInProgress else { return false }
+
+        return !settings.hasCompletedInitialSetup &&
         isShowingSetupStartupAnimation &&
         setupStartupAnimationsEnabled &&
         !settings.skipIntroAnimation

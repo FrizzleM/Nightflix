@@ -80,6 +80,7 @@ final class AppSettingsManager: ObservableObject {
     @AppStorage(AppSettingsStorageKey.hasCompletedInitialSetup) private var hasCompletedInitialSetupStorage = false
     @AppStorage(AppSettingsStorageKey.tmdbCredential) private var tmdbCredentialStorage = ""
     @AppStorage(AppSettingsStorageKey.streamingProviderBaseURL) private var streamingProviderBaseURLStorage = ""
+    @Published private(set) var shutdownCountdown: Int?
 
     var appearance: AppAppearance {
         get {
@@ -153,6 +154,10 @@ final class AppSettingsManager: ObservableObject {
         appearance.colorScheme
     }
 
+    var isShutdownInProgress: Bool {
+        shutdownCountdown != nil
+    }
+
     func completeInitialSetup(tmdbCredential: String, streamingProviderBaseURL: String) {
         objectWillChange.send()
         tmdbCredentialStorage = NightFlixUserConfiguration.normalizedTMDBCredential(from: tmdbCredential)
@@ -164,6 +169,16 @@ final class AppSettingsManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: AppSettingsStorageKey.tmdbCredential)
         UserDefaults.standard.removeObject(forKey: AppSettingsStorageKey.streamingProviderBaseURL)
         UserDefaults.standard.set(false, forKey: AppSettingsStorageKey.hasCompletedInitialSetup)
+    }
+
+    func beginShutdownCountdown() -> Bool {
+        guard shutdownCountdown == nil else { return false }
+        shutdownCountdown = 3
+        return true
+    }
+
+    func updateShutdownCountdown(to secondsRemaining: Int) {
+        shutdownCountdown = secondsRemaining
     }
 }
 
