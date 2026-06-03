@@ -1,8 +1,8 @@
 # Nightflix
 
-Nightflix is an iPhone and iPad app for browsing movies and TV series in a clean, streaming-style interface.
+### Nightflix is an iPhone and iPad app to stream movies and series for free, with a smooth interface.
 
-The app uses TMDB to show movie and series information, such as titles, posters, trending content, popular releases, top-rated items, descriptions, and search results. When you add your own streaming provider, Nightflix can open that provider's player for a selected movie or episode, if the provider supports it.
+The app uses TMDB to show movie and series information, such as titles, posters, trending content, popular releases, top-rated items, descriptions, and search results. When you add your own streaming provider, Nightflix can open that provider's player for a selected movie or episode, if the provider has it available.
 
 Nightflix is not a streaming service by itself. It does not include movies, series, channels, subscriptions, or hosted video files. It is a viewer and launcher for content information from TMDB and playback through a provider that you add yourself.
 
@@ -47,11 +47,5 @@ Nightflix does not own, host, upload, or provide any movies or TV shows. Playbac
 Use Nightflix only with streaming providers and content that you are allowed to access. If a provider is offline, unsupported, or does not contain a selected title, playback may fail.
 
 Nightflix uses TMDB for movie and TV metadata but is not endorsed, certified, or otherwise approved by TMDB.
-
-## Device support
-
-Nightflix is designed for iPhone and iPad.
-
-## Support
-
-For updates, help, and project information, use the links available inside the app's About page.
+Nightflix does not encourage nor endorse its usage for any unauthorized and/or illegal purpose. 
+Nightflix does not encourage piracy in any form. Users are fully responsible for how they use the app and for ensuring that any streaming provider or content they access complies with applicable laws and copyright regulations.
