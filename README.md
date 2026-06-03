@@ -18,7 +18,7 @@ The app uses TMDB to show movie and series information, such as titles, posters,
 
 Nightflix is not a streaming service by itself. It does not include movies, series, channels, subscriptions, or hosted video files. It is a viewer and launcher for content information from TMDB and playback through a provider that you add yourself.
 
-## What you can do
+## Features
 
 - Browse trending movies and series.
 - Search for movies and TV shows.
