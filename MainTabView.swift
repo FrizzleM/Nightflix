@@ -19,6 +19,11 @@ struct MainTabView: View {
     @State private var homeStartupContentAnimationReady = false
     @State private var hasStartedStartupAnimation = false
     @State private var isShowingStartupAnimation = true
+    @State private var hasStartedUpdateCheck = false
+    @State private var canShowUpdatePrompt = false
+    @State private var hasScheduledUpdatePromptUnlock = false
+    @State private var availableUpdate: NightflixAppUpdate?
+    @State private var isShowingUpdatePrompt = false
     @State private var selectedHomeMenuDestination: HomeMenuDestination?
     @State private var isShowingHomeMenu = false
     @StateObject private var myListManager = MyListManager()
@@ -89,6 +94,20 @@ struct MainTabView: View {
             )
             .zIndex(999)
 
+            if isShowingUpdatePrompt, let availableUpdate {
+                NightflixUpdatePromptView(
+                    update: availableUpdate,
+                    onUpdate: {
+                        openUpdate(availableUpdate)
+                    },
+                    onDismiss: {
+                        dismissUpdatePrompt()
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                .zIndex(1002)
+            }
+
             if isShowingStartupAnimation && shouldShowStartupIntro {
                 NightflixStartupAnimationView(animationsEnabled: startupAnimationsEnabled) {
                     finishStartupAnimation()
@@ -104,6 +123,9 @@ struct MainTabView: View {
         }
         .onAppear {
             startStartupAnimationIfNeeded()
+        }
+        .task {
+            await checkForUpdatesIfNeeded()
         }
         .onChange(of: reduceMotion) { _, _ in
             finishStartupAnimationIfDisabled()
@@ -182,6 +204,7 @@ struct MainTabView: View {
     private func playNightflixTitleStartupAnimationIfNeeded() {
         guard shouldAnimateNightflixTitle else {
             showNightflixTitleImmediately(markAsPlayed: true)
+            unlockUpdatePromptAfterStartup()
             return
         }
 
@@ -196,6 +219,7 @@ struct MainTabView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             guard shouldAnimateNightflixTitle else {
                 showNightflixTitleImmediately(markAsPlayed: true)
+                unlockUpdatePromptAfterStartup()
                 return
             }
 
@@ -207,6 +231,7 @@ struct MainTabView: View {
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) {
                 hasPlayedNightflixTitleStartupAnimation = true
+                unlockUpdatePromptAfterStartup()
             }
         }
     }
@@ -234,6 +259,63 @@ struct MainTabView: View {
         if markAsPlayed {
             hasPlayedNightflixTitleStartupAnimation = true
         }
+    }
+
+    private func checkForUpdatesIfNeeded() async {
+        guard !hasStartedUpdateCheck else { return }
+        hasStartedUpdateCheck = true
+
+        do {
+            guard let update = try await NightflixUpdateChecker.availableUpdate() else {
+                return
+            }
+
+            availableUpdate = update
+            presentUpdatePromptIfReady()
+        } catch {
+            return
+        }
+    }
+
+    private func unlockUpdatePromptAfterStartup() {
+        guard !hasScheduledUpdatePromptUnlock else { return }
+        hasScheduledUpdatePromptUnlock = true
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+            canShowUpdatePrompt = true
+            presentUpdatePromptIfReady()
+        }
+    }
+
+    private func presentUpdatePromptIfReady() {
+        guard canShowUpdatePrompt, availableUpdate != nil, !isShowingUpdatePrompt else {
+            return
+        }
+
+        withAnimation(.easeOut(duration: 0.24)) {
+            isShowingUpdatePrompt = true
+        }
+    }
+
+    private func dismissUpdatePrompt() {
+        HapticManager.shared.lightImpact()
+
+        withAnimation(.easeOut(duration: 0.18)) {
+            isShowingUpdatePrompt = false
+        }
+
+        availableUpdate = nil
+    }
+
+    private func openUpdate(_ update: NightflixAppUpdate) {
+        HapticManager.shared.lightImpact()
+
+        withAnimation(.easeOut(duration: 0.18)) {
+            isShowingUpdatePrompt = false
+        }
+
+        availableUpdate = nil
+        openURL(update.downloadURL)
     }
 
     private func replayEntranceAnimation(for tab: AppTab) {
