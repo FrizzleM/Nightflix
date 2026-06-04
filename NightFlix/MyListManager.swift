@@ -6,6 +6,8 @@ final class MyListManager: ObservableObject {
 
     private let storageKey = "myListItems"
     private let userDefaults: UserDefaults
+    private let decoder = JSONDecoder()
+    private let encoder = JSONEncoder()
     private var itemKeys: Set<String> = []
 
     init(userDefaults: UserDefaults = .standard) {
@@ -54,7 +56,7 @@ final class MyListManager: ObservableObject {
         }
 
         do {
-            let decodedItems = try JSONDecoder().decode([MyListItem].self, from: data)
+            let decodedItems = try decoder.decode([MyListItem].self, from: data)
             let normalizedItems = normalizedItems(decodedItems)
 
             items = normalizedItems
@@ -102,7 +104,7 @@ final class MyListManager: ObservableObject {
 
     private func save() {
         do {
-            let data = try JSONEncoder().encode(items)
+            let data = try encoder.encode(items)
             userDefaults.set(data, forKey: storageKey)
         } catch {
             userDefaults.removeObject(forKey: storageKey)

@@ -9,6 +9,8 @@ final class ContinueWatchingManager {
     private let storageKey = "continueWatchingItems"
     private let maxItems = 20
     private let userDefaults: UserDefaults
+    private let decoder = JSONDecoder()
+    private let encoder = JSONEncoder()
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -37,7 +39,7 @@ final class ContinueWatchingManager {
         }
 
         do {
-            let decodedItems = try JSONDecoder().decode([ContinueWatchingItem].self, from: data)
+            let decodedItems = try decoder.decode([ContinueWatchingItem].self, from: data)
             let normalizedItems = normalizedItems(decodedItems)
 
             items = normalizedItems
@@ -72,7 +74,7 @@ final class ContinueWatchingManager {
 
     private func save() {
         do {
-            let data = try JSONEncoder().encode(items)
+            let data = try encoder.encode(items)
             userDefaults.set(data, forKey: storageKey)
         } catch {
             userDefaults.removeObject(forKey: storageKey)

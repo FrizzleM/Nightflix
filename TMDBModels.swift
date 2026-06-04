@@ -2,6 +2,33 @@ import Foundation
 
 struct TMDBSearchResponse<Result: Decodable>: Decodable {
     let results: [Result]
+
+    enum CodingKeys: String, CodingKey {
+        case results
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        results = try container.decodeLossyArray(Result.self, forKey: .results)
+    }
+}
+
+private struct FailableDecodable<Base: Decodable>: Decodable {
+    let value: Base?
+
+    init(from decoder: Decoder) throws {
+        value = try? Base(from: decoder)
+    }
+}
+
+private extension KeyedDecodingContainer {
+    func decodeLossyArray<Value: Decodable>(
+        _ type: Value.Type,
+        forKey key: Key
+    ) throws -> [Value] {
+        let values = try decodeIfPresent([FailableDecodable<Value>].self, forKey: key)
+        return values?.compactMap(\.value) ?? []
+    }
 }
 
 struct TMDBMovieResult: Identifiable, Decodable, Equatable {
@@ -19,6 +46,16 @@ struct TMDBMovieResult: Identifiable, Decodable, Equatable {
         case overview
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Untitled Movie"
+        releaseDate = try container.decodeIfPresent(String.self, forKey: .releaseDate)
+        overview = try container.decodeIfPresent(String.self, forKey: .overview) ?? ""
+        posterPath = try container.decodeIfPresent(String.self, forKey: .posterPath)
+        backdropPath = try container.decodeIfPresent(String.self, forKey: .backdropPath)
     }
 
     var releaseYear: String? {
@@ -46,6 +83,16 @@ struct TMDBTVResult: Identifiable, Decodable, Equatable {
         case overview
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Untitled Series"
+        firstAirDate = try container.decodeIfPresent(String.self, forKey: .firstAirDate)
+        overview = try container.decodeIfPresent(String.self, forKey: .overview) ?? ""
+        posterPath = try container.decodeIfPresent(String.self, forKey: .posterPath)
+        backdropPath = try container.decodeIfPresent(String.self, forKey: .backdropPath)
     }
 
     var firstAirYear: String? {
@@ -289,6 +336,14 @@ struct SeasonDetails: Identifiable, Decodable, Equatable {
         case seasonNumber = "season_number"
         case episodes
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Season"
+        seasonNumber = try container.decode(Int.self, forKey: .seasonNumber)
+        episodes = try container.decodeLossyArray(Episode.self, forKey: .episodes)
+    }
 }
 
 struct Episode: Identifiable, Decodable, Equatable, Hashable {
@@ -308,6 +363,17 @@ struct Episode: Identifiable, Decodable, Equatable, Hashable {
         case overview
         case stillPath = "still_path"
         case airDate = "air_date"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Episode"
+        episodeNumber = try container.decode(Int.self, forKey: .episodeNumber)
+        seasonNumber = try container.decode(Int.self, forKey: .seasonNumber)
+        overview = try container.decodeIfPresent(String.self, forKey: .overview) ?? ""
+        stillPath = try container.decodeIfPresent(String.self, forKey: .stillPath)
+        airDate = try container.decodeIfPresent(String.self, forKey: .airDate)
     }
 
     var stillURL: URL? {
@@ -343,6 +409,19 @@ struct TMDBTrendingResult: Identifiable, Decodable, Equatable {
         case overview
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        mediaType = try container.decode(String.self, forKey: .mediaType)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        name = try container.decodeIfPresent(String.self, forKey: .name)
+        releaseDate = try container.decodeIfPresent(String.self, forKey: .releaseDate)
+        firstAirDate = try container.decodeIfPresent(String.self, forKey: .firstAirDate)
+        overview = try container.decodeIfPresent(String.self, forKey: .overview) ?? ""
+        posterPath = try container.decodeIfPresent(String.self, forKey: .posterPath)
+        backdropPath = try container.decodeIfPresent(String.self, forKey: .backdropPath)
     }
 }
 
@@ -496,6 +575,15 @@ struct MediaRecommendationItem: Identifiable, Decodable, Equatable, Hashable {
 
 struct TMDBListResponse<Result: Decodable & Equatable>: Decodable, Equatable {
     let results: [Result]
+
+    enum CodingKeys: String, CodingKey {
+        case results
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        results = try container.decodeLossyArray(Result.self, forKey: .results)
+    }
 }
 
 struct Credits: Decodable, Equatable {
@@ -628,6 +716,17 @@ struct SeasonDetail: Identifiable, Decodable, Equatable {
         case airDate = "air_date"
         case episodes
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Season"
+        seasonNumber = try container.decode(Int.self, forKey: .seasonNumber)
+        overview = try container.decodeIfPresent(String.self, forKey: .overview)
+        posterPath = try container.decodeIfPresent(String.self, forKey: .posterPath)
+        airDate = try container.decodeIfPresent(String.self, forKey: .airDate)
+        episodes = try container.decodeLossyArray(EpisodeDetail.self, forKey: .episodes)
+    }
 }
 
 struct EpisodeDetail: Identifiable, Decodable, Equatable, Hashable {
@@ -649,6 +748,18 @@ struct EpisodeDetail: Identifiable, Decodable, Equatable, Hashable {
         case stillPath = "still_path"
         case airDate = "air_date"
         case runtime
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Episode"
+        episodeNumber = try container.decode(Int.self, forKey: .episodeNumber)
+        seasonNumber = try container.decode(Int.self, forKey: .seasonNumber)
+        overview = try container.decodeIfPresent(String.self, forKey: .overview) ?? ""
+        stillPath = try container.decodeIfPresent(String.self, forKey: .stillPath)
+        airDate = try container.decodeIfPresent(String.self, forKey: .airDate)
+        runtime = try container.decodeIfPresent(Int.self, forKey: .runtime)
     }
 
     var stillURL: URL? {

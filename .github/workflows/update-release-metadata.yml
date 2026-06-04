@@ -1,0 +1,46 @@
+name: Update Release Metadata
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Release tag to publish metadata from, for example v1.2.0"
+        required: true
+        type: string
+      download_url:
+        description: "Optional IPA download URL override. Defaults to the first .ipa asset on the release."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-release-metadata-${{ github.event.repository.default_branch }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update latest version files
+    if: ${{ github.event_name != 'release' || (!github.event.release.prerelease && !github.event.release.draft) }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Update release metadata
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.event.release.tag_name || github.event.inputs.tag_name }}
+          RELEASE_DOWNLOAD_URL: ${{ github.event.inputs.download_url || '' }}
+          COMMIT_CHANGES: "true"
+          PUSH_BRANCH: ${{ github.event.repository.default_branch }}
+        run: ci/update-release-metadata.sh

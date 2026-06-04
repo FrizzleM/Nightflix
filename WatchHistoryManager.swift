@@ -9,6 +9,8 @@ final class WatchHistoryManager {
     private let storageKey = "recentlyWatchedItems"
     private let maxItems = 12
     private let userDefaults: UserDefaults
+    private let decoder = JSONDecoder()
+    private let encoder = JSONEncoder()
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -40,15 +42,16 @@ final class WatchHistoryManager {
         }
 
         do {
-            items = try JSONDecoder().decode([WatchItem].self, from: data)
+            items = try decoder.decode([WatchItem].self, from: data)
         } catch {
             items = []
+            userDefaults.removeObject(forKey: storageKey)
         }
     }
 
     private func save() {
         do {
-            let data = try JSONEncoder().encode(items)
+            let data = try encoder.encode(items)
             userDefaults.set(data, forKey: storageKey)
         } catch {
             userDefaults.removeObject(forKey: storageKey)

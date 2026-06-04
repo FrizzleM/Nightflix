@@ -51,6 +51,7 @@ final class CategoriesViewModel {
 
     private let service: TMDBService
     private var hasLoaded = false
+    private var activeRequestID: UUID?
 
     init() {
         self.service = TMDBService()
@@ -67,6 +68,8 @@ final class CategoriesViewModel {
     }
 
     func reload() async {
+        let requestID = UUID()
+        activeRequestID = requestID
         isLoadingMovieGenres = true
         isLoadingTVGenres = true
         movieGenresErrorMessage = nil
@@ -77,6 +80,7 @@ final class CategoriesViewModel {
 
         let movieResult = await movieGenreResult
         let tvResult = await tvGenreResult
+        guard activeRequestID == requestID else { return }
 
         movieGenres = movieResult.genres
         movieGenresErrorMessage = movieResult.errorMessage
@@ -85,6 +89,7 @@ final class CategoriesViewModel {
         tvGenres = tvResult.genres
         tvGenresErrorMessage = tvResult.errorMessage
         isLoadingTVGenres = false
+        activeRequestID = nil
     }
 
     func genres(for contentType: CategoryContentType) -> [Genre] {
@@ -145,6 +150,7 @@ final class CategoryDetailViewModel {
 
     private let service: TMDBService
     private var loadedKey: String?
+    private var activeRequestID: UUID?
 
     init() {
         self.service = TMDBService()
@@ -161,6 +167,8 @@ final class CategoryDetailViewModel {
     }
 
     func reload(selection: CategorySelection) async {
+        let requestID = UUID()
+        activeRequestID = requestID
         loadedKey = selection.id
         isLoading = true
         errorMessage = nil
@@ -171,6 +179,8 @@ final class CategoryDetailViewModel {
             switch selection.contentType {
             case .movies:
                 let movies = try await service.discoverMovies(genreId: selection.genre.id)
+                guard activeRequestID == requestID else { return }
+
                 items = movies.map { movie in
                     MediaItem(
                         id: movie.id,
@@ -185,6 +195,8 @@ final class CategoryDetailViewModel {
                 }
             case .tvSeries:
                 let series = try await service.discoverTVSeries(genreId: selection.genre.id)
+                guard activeRequestID == requestID else { return }
+
                 items = series.map { tv in
                     MediaItem(
                         id: tv.id,
@@ -201,10 +213,15 @@ final class CategoryDetailViewModel {
             didLoad = true
         } catch is CancellationError {
         } catch {
+            guard activeRequestID == requestID else { return }
+
             errorMessage = "This category could not be loaded. Please try again."
             didLoad = true
         }
 
+        guard activeRequestID == requestID else { return }
+
         isLoading = false
+        activeRequestID = nil
     }
 }

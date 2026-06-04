@@ -20,6 +20,7 @@ final class FeedViewModel {
 
     private let service: TMDBService
     private var hasLoaded = false
+    private var activeRequestID: UUID?
 
     init() {
         self.service = TMDBService()
@@ -40,6 +41,8 @@ final class FeedViewModel {
     }
 
     private func loadAllSections() async {
+        let requestID = UUID()
+        activeRequestID = requestID
         trending.isLoading = true
         popularMovies.isLoading = true
         popularSeries.isLoading = true
@@ -54,13 +57,29 @@ final class FeedViewModel {
         async let topRatedSeriesTask = loadTopRatedSeries()
 
         let trendingResult = await trendingTask
+        guard activeRequestID == requestID else { return }
+
         featuredHeroItem = trendingResult.featuredHeroItem
         isLoadingFeaturedHero = false
         trending = trendingResult.section
-        popularMovies = await popularMoviesTask
-        popularSeries = await popularSeriesTask
-        topRatedMovies = await topRatedMoviesTask
-        topRatedSeries = await topRatedSeriesTask
+
+        let popularMoviesResult = await popularMoviesTask
+        guard activeRequestID == requestID else { return }
+        popularMovies = popularMoviesResult
+
+        let popularSeriesResult = await popularSeriesTask
+        guard activeRequestID == requestID else { return }
+        popularSeries = popularSeriesResult
+
+        let topRatedMoviesResult = await topRatedMoviesTask
+        guard activeRequestID == requestID else { return }
+        topRatedMovies = topRatedMoviesResult
+
+        let topRatedSeriesResult = await topRatedSeriesTask
+        guard activeRequestID == requestID else { return }
+        topRatedSeries = topRatedSeriesResult
+
+        activeRequestID = nil
         prefetchStartupImages()
     }
 

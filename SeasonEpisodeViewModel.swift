@@ -43,7 +43,9 @@ final class SeasonEpisodeViewModel {
     func loadSeries(seriesId: Int) async {
         let requestID = UUID()
         seriesRequestID = requestID
+        seasonRequestID = nil
         isLoadingSeries = true
+        isLoadingSeason = false
         seriesErrorMessage = nil
         seasonErrorMessage = nil
         selectedSeason = nil

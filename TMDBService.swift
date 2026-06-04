@@ -239,9 +239,26 @@ struct TMDBService {
         }
 
         do {
-            return try JSONDecoder().decode(Result.self, from: data)
+            return try await Self.decode(Result.self, from: data)
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             throw TMDBServiceError.decodingFailed(error)
+        }
+    }
+
+    private static func decode<Result: Decodable>(
+        _ type: Result.Type,
+        from data: Data
+    ) async throws -> Result {
+        let task = Task.detached(priority: .userInitiated) {
+            try JSONDecoder().decode(type, from: data)
+        }
+
+        return try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
         }
     }
 
@@ -284,6 +301,7 @@ private actor TMDBResponseCache {
     private let maxEntries = 200
     private let maxBytes = 32 * 1024 * 1024
     private let diskExpirationUserInfoKey = "NightFlixCacheExpiresAt"
+    private var totalMemoryBytes = 0
 
     init(urlCache: URLCache) {
         self.urlCache = urlCache
@@ -291,13 +309,14 @@ private actor TMDBResponseCache {
 
     func clear() {
         entries = [:]
+        totalMemoryBytes = 0
         inFlightTasks.values.forEach { $0.cancel() }
         inFlightTasks = [:]
         urlCache.removeAllCachedResponses()
     }
 
     func sizeBytes() -> Int {
-        totalBytes + urlCache.currentDiskUsage
+        totalMemoryBytes + urlCache.currentDiskUsage
     }
 
     func data(
@@ -315,7 +334,7 @@ private actor TMDBResponseCache {
                 return entry.data
             }
 
-            entries[key] = nil
+            removeMemoryEntry(for: key)
         }
 
         if let diskData = cachedDiskData(for: request, key: key, now: now) {
@@ -348,10 +367,13 @@ private actor TMDBResponseCache {
             let expiresAt = completedAt.addingTimeInterval(ttl)
 
             inFlightTasks[key] = nil
-            entries[key] = Entry(
-                data: networkResponse.data,
-                expiresAt: expiresAt,
-                lastAccessed: completedAt
+            storeMemoryEntry(
+                Entry(
+                    data: networkResponse.data,
+                    expiresAt: expiresAt,
+                    lastAccessed: completedAt
+                ),
+                for: key
             )
             storeDiskData(
                 networkResponse.data,
@@ -368,10 +390,37 @@ private actor TMDBResponseCache {
         }
     }
 
-    private func prune(now: Date) {
-        entries = entries.filter { $0.value.expiresAt > now }
+    private func storeMemoryEntry(_ entry: Entry, for key: String) {
+        if let existingEntry = entries[key] {
+            totalMemoryBytes -= existingEntry.data.count
+        }
 
-        guard entries.count > maxEntries || totalBytes > maxBytes else {
+        entries[key] = entry
+        totalMemoryBytes += entry.data.count
+    }
+
+    private func removeMemoryEntry(for key: String) {
+        guard let existingEntry = entries.removeValue(forKey: key) else {
+            return
+        }
+
+        totalMemoryBytes -= existingEntry.data.count
+    }
+
+    private func removeExpiredMemoryEntries(now: Date) {
+        let expiredKeys = entries.compactMap { key, entry in
+            entry.expiresAt <= now ? key : nil
+        }
+
+        for key in expiredKeys {
+            removeMemoryEntry(for: key)
+        }
+    }
+
+    private func prune(now: Date) {
+        removeExpiredMemoryEntries(now: now)
+
+        guard entries.count > maxEntries || totalMemoryBytes > maxBytes else {
             return
         }
 
@@ -380,16 +429,12 @@ private actor TMDBResponseCache {
             .map(\.key)
 
         for key in keysByLastAccess {
-            guard entries.count > maxEntries || totalBytes > maxBytes else {
+            guard entries.count > maxEntries || totalMemoryBytes > maxBytes else {
                 break
             }
 
-            entries[key] = nil
+            removeMemoryEntry(for: key)
         }
-    }
-
-    private var totalBytes: Int {
-        entries.values.reduce(0) { $0 + $1.data.count }
     }
 
     private func cachedDiskData(for request: URLRequest, key: String, now: Date) -> Data? {
@@ -403,10 +448,13 @@ private actor TMDBResponseCache {
             return nil
         }
 
-        entries[key] = Entry(
-            data: cachedResponse.data,
-            expiresAt: expiresAt,
-            lastAccessed: now
+        storeMemoryEntry(
+            Entry(
+                data: cachedResponse.data,
+                expiresAt: expiresAt,
+                lastAccessed: now
+            ),
+            for: key
         )
         prune(now: now)
 
