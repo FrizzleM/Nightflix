@@ -11,7 +11,7 @@ on:
         required: true
         type: string
       download_url:
-        description: "Optional IPA download URL override. Defaults to the first .ipa asset on the release."
+        description: "Optional download URL override. Defaults to the first .ipa asset on the release when present."
         required: false
         type: string
 

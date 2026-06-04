@@ -1,4 +1,4 @@
-name: Nightly IPA Release
+name: Nightly Release Metadata
 
 on:
   schedule:
@@ -9,33 +9,19 @@ permissions:
   contents: write
 
 concurrency:
-  group: nightly-ipa-release
+  group: nightly-release-metadata
   cancel-in-progress: true
 
-env:
-  PROJECT: NightFlix.xcodeproj
-  SCHEME: NightFlix
-  CONFIGURATION: Release
-  PRODUCT_NAME: NightFlix
-  BUNDLE_IDENTIFIER: FrizzleM.NightFlix
-  XCODE_APP: ${{ vars.XCODE_APP || 'Xcode_26.5.app' }}
-
 jobs:
-  build:
-    name: Build nightly IPA
-    runs-on: macos-26
+  release:
+    name: Publish nightly prerelease metadata
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Select Xcode
-        run: sudo xcode-select -s "/Applications/${XCODE_APP}/Contents/Developer"
-
-      - name: Show Xcode version
-        run: xcodebuild -version
 
       - name: Prepare nightly metadata
         id: nightly
@@ -48,33 +34,6 @@ jobs:
           tag_name="nightly-${run_date}-${short_sha}"
 
           echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
-          echo "ipa_name=NightFlix-${tag_name}.ipa" >> "$GITHUB_OUTPUT"
-
-      - name: Import iOS signing assets
-        shell: bash
-        env:
-          IOS_BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
-          IOS_P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
-          IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
-          IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
-          IOS_DEVELOPMENT_TEAM: ${{ vars.IOS_DEVELOPMENT_TEAM || secrets.IOS_DEVELOPMENT_TEAM }}
-        run: ci/import-ios-signing-assets.sh
-
-      - name: Build IPA
-        id: build
-        shell: bash
-        env:
-          CURRENT_PROJECT_VERSION: ${{ github.run_number }}
-          EXPORT_METHOD: ${{ vars.IOS_NIGHTLY_EXPORT_METHOD || 'debugging' }}
-          IPA_NAME: ${{ steps.nightly.outputs.ipa_name }}
-        run: ci/build-ipa.sh
-
-      - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: NightFlix-nightly-${{ steps.nightly.outputs.tag_name }}
-          path: dist/*.ipa
-          if-no-files-found: error
 
       - name: Create nightly tag
         shell: bash
@@ -108,11 +67,6 @@ jobs:
 
           if gh release view "$TAG_NAME" > /dev/null 2>&1; then
             gh release edit "$TAG_NAME" --title "$TAG_NAME" --notes "$release_body" --prerelease
-            gh release view "$TAG_NAME" --json assets --jq '.assets[].name | select(endswith(".ipa") | not)' |
-              while IFS= read -r asset_name; do
-                gh release delete-asset "$TAG_NAME" "$asset_name" --yes
-              done
-            gh release upload "$TAG_NAME" dist/*.ipa --clobber
           else
-            gh release create "$TAG_NAME" dist/*.ipa --title "$TAG_NAME" --notes "$release_body" --prerelease --verify-tag
+            gh release create "$TAG_NAME" --title "$TAG_NAME" --notes "$release_body" --prerelease --verify-tag
           fi

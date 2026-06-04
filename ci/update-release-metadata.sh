@@ -42,10 +42,10 @@ fi
 release_json=""
 if [[ -n "$TAG_NAME" && ( -z "$RELEASE_DOWNLOAD_URL" || -z "$RELEASE_ASSET_SIZE" || -z "$RELEASE_PUBLISHED_AT" ) ]]; then
   if command -v gh > /dev/null 2>&1 && [[ -n "${GITHUB_REPOSITORY:-}" ]]; then
-    release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG_NAME}")"
-  elif [[ -z "$RELEASE_DOWNLOAD_URL" ]]; then
-    echo "::error::RELEASE_DOWNLOAD_URL is required when GitHub release metadata cannot be fetched."
-    exit 1
+    if ! release_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG_NAME}" 2> /dev/null)"; then
+      echo "::warning::Could not fetch GitHub release metadata for $TAG_NAME; keeping existing download metadata."
+      release_json=""
+    fi
   fi
 fi
 
@@ -63,11 +63,6 @@ fi
 
 if [[ -z "$RELEASE_PUBLISHED_AT" && -n "$release_json" ]]; then
   RELEASE_PUBLISHED_AT="$(jq -r '.published_at // empty' <<< "$release_json")"
-fi
-
-if [[ -z "$RELEASE_DOWNLOAD_URL" ]]; then
-  echo "::error::No .ipa asset download URL was found for release ${TAG_NAME:-unknown}."
-  exit 1
 fi
 
 if [[ -n "${APP_VERSION:-}" ]]; then
@@ -118,7 +113,7 @@ jq \
   --argjson assetSize "$asset_size_json" \
   '(.apps[] | select(.bundleIdentifier == $bundle) | .versions[0]) |= (
     .version = $version
-    | .downloadURL = $downloadURL
+    | if $downloadURL != "" then .downloadURL = $downloadURL else . end
     | if $publishedAt != "" then .date = $publishedAt else . end
     | if $assetSize != null then .size = $assetSize else . end
   )' \
@@ -127,7 +122,11 @@ mv "$tmp_repo_json" "$REPO_JSON_FILE"
 trap - EXIT
 
 echo "Updated $LATEST_VERSION_FILE to $app_version."
-echo "Updated $REPO_JSON_FILE download URL to $RELEASE_DOWNLOAD_URL."
+if [[ -n "$RELEASE_DOWNLOAD_URL" ]]; then
+  echo "Updated $REPO_JSON_FILE download URL to $RELEASE_DOWNLOAD_URL."
+else
+  echo "Left $REPO_JSON_FILE download URL unchanged."
+fi
 
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   {

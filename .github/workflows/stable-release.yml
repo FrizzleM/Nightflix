@@ -1,4 +1,4 @@
-name: Stable IPA Release
+name: Stable Release Metadata
 
 on:
   push:
@@ -15,33 +15,19 @@ permissions:
   contents: write
 
 concurrency:
-  group: stable-ipa-release-${{ github.ref }}
+  group: stable-release-metadata-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  PROJECT: NightFlix.xcodeproj
-  SCHEME: NightFlix
-  CONFIGURATION: Release
-  PRODUCT_NAME: NightFlix
-  BUNDLE_IDENTIFIER: FrizzleM.NightFlix
-  XCODE_APP: ${{ vars.XCODE_APP || 'Xcode_26.5.app' }}
-
 jobs:
-  build:
-    name: Build stable IPA
-    runs-on: macos-26
+  update:
+    name: Update stable release metadata
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Select Xcode
-        run: sudo xcode-select -s "/Applications/${XCODE_APP}/Contents/Developer"
-
-      - name: Show Xcode version
-        run: xcodebuild -version
 
       - name: Prepare release metadata
         id: release
@@ -63,35 +49,7 @@ jobs:
           fi
 
           echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
-          echo "ipa_name=NightFlix-${tag_name}.ipa" >> "$GITHUB_OUTPUT"
           echo "marketing_version=${tag_name#v}" >> "$GITHUB_OUTPUT"
-
-      - name: Import iOS signing assets
-        shell: bash
-        env:
-          IOS_BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
-          IOS_P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
-          IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
-          IOS_KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
-          IOS_DEVELOPMENT_TEAM: ${{ vars.IOS_DEVELOPMENT_TEAM || secrets.IOS_DEVELOPMENT_TEAM }}
-        run: ci/import-ios-signing-assets.sh
-
-      - name: Build IPA
-        id: build
-        shell: bash
-        env:
-          CURRENT_PROJECT_VERSION: ${{ github.run_number }}
-          EXPORT_METHOD: ${{ vars.IOS_STABLE_EXPORT_METHOD || 'debugging' }}
-          IPA_NAME: ${{ steps.release.outputs.ipa_name }}
-          MARKETING_VERSION: ${{ steps.release.outputs.marketing_version }}
-        run: ci/build-ipa.sh
-
-      - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: NightFlix-stable-${{ steps.release.outputs.tag_name }}
-          path: dist/*.ipa
-          if-no-files-found: error
 
       - name: Create manual release tag
         if: ${{ github.event_name == 'workflow_dispatch' }}
@@ -126,13 +84,8 @@ jobs:
 
           if gh release view "$TAG_NAME" > /dev/null 2>&1; then
             gh release edit "$TAG_NAME" --title "$TAG_NAME" --notes "$release_body" --latest
-            gh release view "$TAG_NAME" --json assets --jq '.assets[].name | select(endswith(".ipa") | not)' |
-              while IFS= read -r asset_name; do
-                gh release delete-asset "$TAG_NAME" "$asset_name" --yes
-              done
-            gh release upload "$TAG_NAME" dist/*.ipa --clobber
           else
-            gh release create "$TAG_NAME" dist/*.ipa --title "$TAG_NAME" --notes "$release_body" --latest --verify-tag
+            gh release create "$TAG_NAME" --title "$TAG_NAME" --notes "$release_body" --latest --verify-tag
           fi
 
       - name: Checkout default branch for release metadata
@@ -146,6 +99,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ steps.release.outputs.tag_name }}
+          APP_VERSION: ${{ steps.release.outputs.marketing_version }}
           COMMIT_CHANGES: "true"
           PUSH_BRANCH: ${{ github.event.repository.default_branch }}
         run: ci/update-release-metadata.sh
