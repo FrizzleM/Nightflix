@@ -33,6 +33,8 @@ enum AppSettingsStorageKey {
     static let appAppearance = "appAppearance"
     static let appAnimationMode = "appAnimationMode"
     static let skipIntroAnimation = "skipIntroAnimation"
+    static let disableAutomaticUpdateChecks = "disableAutomaticUpdateChecks"
+    static let lastInstalledVersionCode = "lastInstalledVersionCode"
     static let hasCompletedInitialSetup = "hasCompletedInitialSetup"
     static let tmdbCredential = "tmdbCredential"
     static let streamingProviderBaseURL = "streamingProviderBaseURL"
@@ -77,6 +79,8 @@ final class AppSettingsManager: ObservableObject {
     @AppStorage(AppSettingsStorageKey.appAppearance) var appearanceRawValue: String = AppAppearance.auto.rawValue
     @AppStorage(AppSettingsStorageKey.appAnimationMode) var animationModeRawValue: String = AppAnimationMode.total.rawValue
     @AppStorage(AppSettingsStorageKey.skipIntroAnimation) private var skipIntroAnimationStorage = false
+    @AppStorage(AppSettingsStorageKey.disableAutomaticUpdateChecks) private var disableAutomaticUpdateChecksStorage = false
+    @AppStorage(AppSettingsStorageKey.lastInstalledVersionCode) private var lastInstalledVersionCodeStorage = 0
     @AppStorage(AppSettingsStorageKey.hasCompletedInitialSetup) private var hasCompletedInitialSetupStorage = false
     @AppStorage(AppSettingsStorageKey.tmdbCredential) private var tmdbCredentialStorage = ""
     @AppStorage(AppSettingsStorageKey.streamingProviderBaseURL) private var streamingProviderBaseURLStorage = ""
@@ -109,6 +113,16 @@ final class AppSettingsManager: ObservableObject {
         set {
             objectWillChange.send()
             skipIntroAnimationStorage = newValue
+        }
+    }
+
+    var disableAutomaticUpdateChecks: Bool {
+        get {
+            disableAutomaticUpdateChecksStorage
+        }
+        set {
+            objectWillChange.send()
+            disableAutomaticUpdateChecksStorage = newValue
         }
     }
 
@@ -179,6 +193,29 @@ final class AppSettingsManager: ObservableObject {
 
     func updateShutdownCountdown(to secondsRemaining: Int) {
         shutdownCountdown = secondsRemaining
+    }
+
+    func updateAutomaticUpdateCheckPreferenceForInstalledVersion() {
+        guard let currentVersionCode = NightflixUpdateChecker.currentInstalledVersionCode else {
+            return
+        }
+
+        guard lastInstalledVersionCodeStorage > 0 else {
+            lastInstalledVersionCodeStorage = currentVersionCode
+            return
+        }
+
+        guard currentVersionCode != lastInstalledVersionCodeStorage else {
+            return
+        }
+
+        objectWillChange.send()
+
+        if currentVersionCode > lastInstalledVersionCodeStorage {
+            disableAutomaticUpdateChecksStorage = true
+        }
+
+        lastInstalledVersionCodeStorage = currentVersionCode
     }
 }
 

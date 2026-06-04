@@ -27,6 +27,10 @@ enum NightflixUpdateChecker {
         string: "https://raw.githubusercontent.com/FrizzleM/Nightflix/main/latest-version.txt"
     )!
 
+    static var currentInstalledVersionCode: Int? {
+        currentVersionCode
+    }
+
     static func availableUpdate() async throws -> NightflixAppUpdate? {
         guard let currentVersionCode else {
             return nil

@@ -264,6 +264,11 @@ struct MainTabView: View {
     private func checkForUpdatesIfNeeded() async {
         guard !hasStartedUpdateCheck else { return }
         hasStartedUpdateCheck = true
+        settings.updateAutomaticUpdateCheckPreferenceForInstalledVersion()
+
+        guard !settings.disableAutomaticUpdateChecks else {
+            return
+        }
 
         do {
             guard let update = try await NightflixUpdateChecker.availableUpdate() else {

@@ -49,6 +49,9 @@ struct ContentView: View {
         .onChange(of: settings.skipIntroAnimation) { _, _ in
             finishSetupStartupAnimationIfDisabled()
         }
+        .onAppear {
+            settings.updateAutomaticUpdateCheckPreferenceForInstalledVersion()
+        }
     }
 
     private var setupStartupAnimationsEnabled: Bool {

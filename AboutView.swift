@@ -246,6 +246,7 @@ struct SettingsView: View {
                     connectionSection
                     appearanceSection
                     animationsSection
+                    updatesSection
 
                     VStack(spacing: 12) {
                         deleteHistoryButton
@@ -396,6 +397,25 @@ struct SettingsView: View {
         }
     }
 
+    private var updatesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Updates")
+                .font(.headline)
+                .foregroundStyle(NightFlixStyle.primaryTextColor)
+
+            Toggle("Disable automatic update checks", isOn: disableAutomaticUpdateChecksBinding)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(NightFlixStyle.primaryTextColor)
+                .tint(NightFlixStyle.accentColor)
+        }
+        .padding(16)
+        .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(NightFlixStyle.borderColor, lineWidth: 1)
+        }
+    }
+
     private var appearanceBinding: Binding<AppAppearance> {
         Binding(
             get: { settings.appearance },
@@ -425,6 +445,17 @@ struct SettingsView: View {
                 guard settings.skipIntroAnimation != newValue else { return }
                 HapticManager.shared.selection()
                 settings.skipIntroAnimation = newValue
+            }
+        )
+    }
+
+    private var disableAutomaticUpdateChecksBinding: Binding<Bool> {
+        Binding(
+            get: { settings.disableAutomaticUpdateChecks },
+            set: { newValue in
+                guard settings.disableAutomaticUpdateChecks != newValue else { return }
+                HapticManager.shared.selection()
+                settings.disableAutomaticUpdateChecks = newValue
             }
         )
     }
