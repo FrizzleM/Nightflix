@@ -10,7 +10,7 @@ Download the <a href="https://github.com/FrizzleM/Nightflix/releases/latest">lat
 
 OR
 
-Add the <a href="https://frizzlem.github.io/Nighflix/">repo to Feather</a>
+Add the <a href="https://frizzlem.github.io/Nightflix/">repo to Feather</a>
 
 </div>
 
