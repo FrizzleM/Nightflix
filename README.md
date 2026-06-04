@@ -10,19 +10,17 @@ Download the <a href="https://github.com/FrizzleM/Nightflix/releases/latest">lat
 
 OR
 
-Add the <a href="https://frizzlem.github.io/Nighflix/featheradd.html">repo to Feather</a>
+Add the <a href="https://frizzlem.github.io/Nightflix/">repo to Feather</a>
 
 </div>
 
-### Nightflix is an iPhone and iPad app to stream movies and series for free, with a smooth interface.
+### Nightflix is an iPhone and iPad app to stream movies and series for free
 
-The app uses TMDB to show movie and series information, such as titles, posters, trending content, popular releases, top-rated items, descriptions, and search results. When you add your own streaming provider, Nightflix can open that provider's player for a selected movie or episode, if the provider has it available.
 
 <p align="center">
   <img width="231" height="500" alt="simulator_screenshot_C99E5D5E-3CB4-4CFB-9433-38BF8C72CCF2" src="https://github.com/user-attachments/assets/776d5918-de13-4f8e-8cd3-6a577bc680bc" />
 </p>
 
-Nightflix is not a streaming service by itself. It does not include movies, series, channels, subscriptions, or hosted video files. It is a viewer and launcher for content information from TMDB and playback through a provider that you add yourself.
 
 ## Features
 
