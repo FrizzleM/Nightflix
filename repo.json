@@ -1,5 +1,6 @@
 {
   "name": "Frizzle's repo",
+  "identifier": "com.frizzlem.nightflix.repo",
   "subtitle": "Apps by Frizzle",
   "description": "A source for Frizzle's iOS apps.",
   "iconURL": "https://files.catbox.moe/god4p6.jpeg",
@@ -33,7 +34,11 @@
       "appPermissions": {
         "entitlements": [],
         "privacy": {}
-      }
+      },
+      "version": "1.1.0",
+      "versionDate": "2026-06-04T09:30:00+02:00",
+      "size": 6200000,
+      "downloadURL": "https://github.com/FrizzleM/Nightflix/releases/download/v1.1.0/Nightflix.ipa"
     }
   ],
   "news": []

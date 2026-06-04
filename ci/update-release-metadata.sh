@@ -31,6 +31,45 @@ if ! command -v jq > /dev/null 2>&1; then
   exit 1
 fi
 
+require_repo_app_version() {
+  if ! jq -e --arg bundle "$APP_BUNDLE_IDENTIFIER" '
+    type == "object"
+    and (.apps | type == "array")
+    and any(.apps[]?; .bundleIdentifier == $bundle and (.versions | type == "array") and (.versions | length > 0))
+  ' "$REPO_JSON_FILE" > /dev/null; then
+    echo "::error::Could not find an app entry with at least one version for bundle $APP_BUNDLE_IDENTIFIER."
+    exit 1
+  fi
+}
+
+validate_feather_repo_json() {
+  if ! jq -e --arg bundle "$APP_BUNDLE_IDENTIFIER" '
+    def non_empty_string:
+      type == "string" and length > 0;
+
+    type == "object"
+    and (.name | non_empty_string)
+    and (.identifier | non_empty_string)
+    and (.apps | type == "array" and length > 0)
+    and any(.apps[]?;
+      .bundleIdentifier == $bundle
+      and (.name | non_empty_string)
+      and (.developerName | non_empty_string)
+      and (.iconURL | non_empty_string)
+      and (.versions | type == "array" and length > 0)
+      and (.versions[0].version | non_empty_string)
+      and (.versions[0].downloadURL | non_empty_string)
+      and (.version == .versions[0].version)
+      and (.versionDate == .versions[0].date)
+      and (.downloadURL == .versions[0].downloadURL)
+      and (.size == .versions[0].size)
+    )
+  ' "$REPO_JSON_FILE" > /dev/null; then
+    echo "::error::$REPO_JSON_FILE is not in the expected Feather source format."
+    exit 1
+  fi
+}
+
 if [[ -n "$TAG_NAME" ]]; then
   git fetch --force origin "refs/tags/${TAG_NAME}:refs/tags/${TAG_NAME}" || git fetch --force --tags origin
 fi
@@ -83,12 +122,7 @@ if [[ ! "$app_version" =~ ^[0-9]+[.][0-9]+([.][0-9]+)?$ ]]; then
   exit 1
 fi
 
-if ! jq -e --arg bundle "$APP_BUNDLE_IDENTIFIER" \
-  'any(.apps[]?; .bundleIdentifier == $bundle and (.versions | type == "array") and (.versions | length > 0))' \
-  "$REPO_JSON_FILE" > /dev/null; then
-  echo "::error::Could not find an app entry with at least one version for bundle $APP_BUNDLE_IDENTIFIER."
-  exit 1
-fi
+require_repo_app_version
 
 asset_size_json="null"
 if [[ -n "$RELEASE_ASSET_SIZE" && "$RELEASE_ASSET_SIZE" != "null" ]]; then
@@ -111,15 +145,23 @@ jq \
   --arg downloadURL "$RELEASE_DOWNLOAD_URL" \
   --arg publishedAt "$RELEASE_PUBLISHED_AT" \
   --argjson assetSize "$asset_size_json" \
-  '(.apps[] | select(.bundleIdentifier == $bundle) | .versions[0]) |= (
-    .version = $version
-    | if $downloadURL != "" then .downloadURL = $downloadURL else . end
-    | if $publishedAt != "" then .date = $publishedAt else . end
-    | if $assetSize != null then .size = $assetSize else . end
+  '(.apps[] | select(.bundleIdentifier == $bundle)) |= (
+    .versions[0] |= (
+      .version = $version
+      | if $downloadURL != "" then .downloadURL = $downloadURL else . end
+      | if $publishedAt != "" then .date = $publishedAt else . end
+      | if $assetSize != null then .size = $assetSize else . end
+    )
+    | .version = .versions[0].version
+    | if .versions[0].date != null then .versionDate = .versions[0].date else del(.versionDate) end
+    | if .versions[0].downloadURL != null then .downloadURL = .versions[0].downloadURL else del(.downloadURL) end
+    | if .versions[0].size != null then .size = .versions[0].size else del(.size) end
   )' \
   "$REPO_JSON_FILE" > "$tmp_repo_json"
 mv "$tmp_repo_json" "$REPO_JSON_FILE"
 trap - EXIT
+
+validate_feather_repo_json
 
 echo "Updated $LATEST_VERSION_FILE to $app_version."
 if [[ -n "$RELEASE_DOWNLOAD_URL" ]]; then
