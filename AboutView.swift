@@ -403,7 +403,7 @@ struct SettingsView: View {
                 .font(.headline)
                 .foregroundStyle(NightFlixStyle.primaryTextColor)
 
-            Toggle("Disable automatic update checks", isOn: disableAutomaticUpdateChecksBinding)
+            Toggle("Automatic update checks", isOn: automaticUpdateChecksBinding)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(NightFlixStyle.primaryTextColor)
                 .tint(NightFlixStyle.accentColor)
@@ -449,13 +449,13 @@ struct SettingsView: View {
         )
     }
 
-    private var disableAutomaticUpdateChecksBinding: Binding<Bool> {
+    private var automaticUpdateChecksBinding: Binding<Bool> {
         Binding(
-            get: { settings.disableAutomaticUpdateChecks },
+            get: { settings.automaticUpdateChecksEnabled },
             set: { newValue in
-                guard settings.disableAutomaticUpdateChecks != newValue else { return }
+                guard settings.automaticUpdateChecksEnabled != newValue else { return }
                 HapticManager.shared.selection()
-                settings.disableAutomaticUpdateChecks = newValue
+                settings.automaticUpdateChecksEnabled = newValue
             }
         )
     }

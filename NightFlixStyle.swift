@@ -116,13 +116,13 @@ final class AppSettingsManager: ObservableObject {
         }
     }
 
-    var disableAutomaticUpdateChecks: Bool {
+    var automaticUpdateChecksEnabled: Bool {
         get {
-            disableAutomaticUpdateChecksStorage
+            !disableAutomaticUpdateChecksStorage
         }
         set {
             objectWillChange.send()
-            disableAutomaticUpdateChecksStorage = newValue
+            disableAutomaticUpdateChecksStorage = !newValue
         }
     }
 
@@ -212,7 +212,7 @@ final class AppSettingsManager: ObservableObject {
         objectWillChange.send()
 
         if currentVersionCode > lastInstalledVersionCodeStorage {
-            disableAutomaticUpdateChecksStorage = true
+            disableAutomaticUpdateChecksStorage = false
         }
 
         lastInstalledVersionCodeStorage = currentVersionCode

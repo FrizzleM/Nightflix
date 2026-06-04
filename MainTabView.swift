@@ -266,7 +266,7 @@ struct MainTabView: View {
         hasStartedUpdateCheck = true
         settings.updateAutomaticUpdateCheckPreferenceForInstalledVersion()
 
-        guard !settings.disableAutomaticUpdateChecks else {
+        guard settings.automaticUpdateChecksEnabled else {
             return
         }
 
