@@ -120,8 +120,6 @@ enum NightFlixUserConfiguration {
 
 final class AppSettingsManager: ObservableObject {
     @AppStorage(AppSettingsStorageKey.appAppearance) var appearanceRawValue: String = AppAppearance.auto.rawValue
-    @AppStorage(AppSettingsStorageKey.appAnimationMode) var animationModeRawValue: String = AppAnimationMode.total.rawValue
-    @AppStorage(AppSettingsStorageKey.skipIntroAnimation) private var skipIntroAnimationStorage = false
     @AppStorage(AppSettingsStorageKey.disableAutomaticUpdateChecks) private var disableAutomaticUpdateChecksStorage = false
     @AppStorage(AppSettingsStorageKey.lastInstalledVersionCode) private var lastInstalledVersionCodeStorage = 0
     @AppStorage(AppSettingsStorageKey.hasCompletedInitialSetup) private var hasCompletedInitialSetupStorage = false
@@ -140,25 +138,12 @@ final class AppSettingsManager: ObservableObject {
         }
     }
 
-    var animationMode: AppAnimationMode {
-        get {
-            AppAnimationMode(rawValue: animationModeRawValue) ?? .total
-        }
-        set {
-            objectWillChange.send()
-            animationModeRawValue = newValue.rawValue
-        }
-    }
+    /// Animations are always on at full strength — this is the standard now and is
+    /// no longer user-configurable.
+    var animationMode: AppAnimationMode { .total }
 
-    var skipIntroAnimation: Bool {
-        get {
-            skipIntroAnimationStorage
-        }
-        set {
-            objectWillChange.send()
-            skipIntroAnimationStorage = newValue
-        }
-    }
+    /// The intro animation always plays, in keeping with full standard animations.
+    var skipIntroAnimation: Bool { false }
 
     var automaticUpdateChecksEnabled: Bool {
         get {
@@ -188,6 +173,25 @@ final class AppSettingsManager: ObservableObject {
             objectWillChange.send()
             tmdbCredentialStorage = NightFlixUserConfiguration.normalizedTMDBCredential(from: newValue)
         }
+    }
+
+    /// True when a valid user-supplied TMDB token is overriding the baked-in default.
+    var isUsingCustomTMDBCredential: Bool {
+        !customTMDBCredentialOverride.isEmpty
+    }
+
+    /// The raw user-saved TMDB token override, or "" when the default is in use.
+    /// (Unlike `tmdbCredential`, this never falls back to the baked-in token.)
+    var customTMDBCredentialOverride: String {
+        let stored = NightFlixUserConfiguration.normalizedTMDBCredential(from: tmdbCredentialStorage)
+        return NightFlixUserConfiguration.isValidTMDBReadAccessToken(stored) ? stored : ""
+    }
+
+    /// Drops any custom token so the app reverts to the baked-in default key.
+    func resetTMDBCredential() {
+        guard !tmdbCredentialStorage.isEmpty else { return }
+        objectWillChange.send()
+        tmdbCredentialStorage = ""
     }
 
     var streamingProviderBaseURL: String {
@@ -456,6 +460,11 @@ enum StreamingProviderURLBuilder {
 
         components.path = "/\(combinedPath)"
 
+        // Vidking's `progress` query param sets the resume start time (seconds). The
+        // player seeks there correctly, but it *re-applies* that seek on every
+        // playback tick, which snaps the video back and makes it loop on the resume
+        // second. We keep the param (it's what actually resumes) and suppress the
+        // buggy repeats in the WebView — see `WebView.resumeLoopGuardScript`.
         var queryItems = (components.queryItems ?? []) + fixedPlaybackQueryItems
         if let progressSeconds, progressSeconds > 0 {
             queryItems.append(URLQueryItem(name: "progress", value: String(progressSeconds)))
@@ -502,7 +511,8 @@ extension View {
         yOffset: CGFloat = 18,
         scaleAmount: CGFloat = 0.96,
         reduceMotionDuration: Double = 0.12,
-        animationsEnabled: Bool = true
+        animationsEnabled: Bool = true,
+        onceKey: String? = nil
     ) -> some View {
         modifier(
             AnimatedEntranceModifier(
@@ -511,7 +521,8 @@ extension View {
                 yOffset: yOffset,
                 scaleAmount: scaleAmount,
                 reduceMotionDuration: reduceMotionDuration,
-                animationsEnabled: animationsEnabled
+                animationsEnabled: animationsEnabled,
+                onceKey: onceKey
             )
         )
     }
@@ -544,6 +555,25 @@ extension View {
     }
 }
 
+/// Remembers, for the lifetime of the app process (i.e. one session), which keyed
+/// entrance animations have already played. Used so a fade-in only happens once
+/// per session: when a view is recreated — e.g. a feed section scrolling out of a
+/// `LazyVStack` and back in — it can render fully shown instead of replaying.
+/// The set lives only in memory, so it naturally resets when the app relaunches.
+final class EntranceAnimationTracker {
+    static let shared = EntranceAnimationTracker()
+
+    private var playedKeys: Set<String> = []
+
+    func hasPlayed(_ key: String) -> Bool {
+        playedKeys.contains(key)
+    }
+
+    func markPlayed(_ key: String) {
+        playedKeys.insert(key)
+    }
+}
+
 struct AnimatedEntranceModifier: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -553,8 +583,34 @@ struct AnimatedEntranceModifier: ViewModifier {
     let scaleAmount: CGFloat
     let reduceMotionDuration: Double
     let animationsEnabled: Bool
+    /// When set, the fade-in plays only the first time it runs in a session.
+    /// Later appearances (e.g. after scrolling away and back) show immediately.
+    let onceKey: String?
 
-    @State private var animatedVisible = false
+    @State private var animatedVisible: Bool
+
+    init(
+        isVisible: Bool,
+        delay: Double,
+        yOffset: CGFloat,
+        scaleAmount: CGFloat,
+        reduceMotionDuration: Double,
+        animationsEnabled: Bool,
+        onceKey: String?
+    ) {
+        self.isVisible = isVisible
+        self.delay = delay
+        self.yOffset = yOffset
+        self.scaleAmount = scaleAmount
+        self.reduceMotionDuration = reduceMotionDuration
+        self.animationsEnabled = animationsEnabled
+        self.onceKey = onceKey
+
+        // If this entrance already played earlier in the session, start fully
+        // shown so the recreated view neither flashes nor replays the fade-in.
+        let alreadyPlayed = onceKey.map(EntranceAnimationTracker.shared.hasPlayed) ?? false
+        _animatedVisible = State(initialValue: alreadyPlayed)
+    }
 
     func body(content: Content) -> some View {
         content
@@ -589,14 +645,21 @@ struct AnimatedEntranceModifier: ViewModifier {
         return animatedVisible ? 1 : scaleAmount
     }
 
+    private var hasAlreadyPlayedThisSession: Bool {
+        guard let onceKey else { return false }
+        return EntranceAnimationTracker.shared.hasPlayed(onceKey)
+    }
+
     private func updateVisibility(_ visible: Bool) {
         guard animationsEnabled, !reduceMotion else {
-            var transaction = Transaction()
-            transaction.animation = nil
+            showImmediately()
+            return
+        }
 
-            withTransaction(transaction) {
-                animatedVisible = true
-            }
+        // A play-once entrance that already ran stays shown — it must not replay
+        // when the view is recreated or when `isVisible` toggles during a replay.
+        if hasAlreadyPlayedThisSession {
+            showImmediately()
             return
         }
 
@@ -610,7 +673,20 @@ struct AnimatedEntranceModifier: ViewModifier {
             return
         }
 
+        if let onceKey {
+            EntranceAnimationTracker.shared.markPlayed(onceKey)
+        }
+
         withAnimation(.easeOut(duration: 0.46).delay(delay)) {
+            animatedVisible = true
+        }
+    }
+
+    private func showImmediately() {
+        var transaction = Transaction()
+        transaction.animation = nil
+
+        withTransaction(transaction) {
             animatedVisible = true
         }
     }

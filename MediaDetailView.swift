@@ -233,7 +233,11 @@ struct MediaDetailView: View {
             label: "My List",
             tint: saved ? NightFlixStyle.accentColor : .white
         ) {
-            HapticManager.shared.lightImpact()
+            if saved {
+                HapticManager.shared.toggleOff()
+            } else {
+                HapticManager.shared.bloom()
+            }
             toggleMyList()
         }
     }
@@ -756,7 +760,7 @@ struct MediaDetailView: View {
 
     private func playMovie(_ movie: MovieDetail) {
         playErrorMessage = nil
-        HapticManager.shared.mediumImpact()
+        HapticManager.shared.impactStrong()
 
         guard let url = StreamingProviderURLBuilder.movieURL(
             tmdbId: movie.id,
@@ -794,7 +798,7 @@ struct MediaDetailView: View {
 
     private func playEpisode(_ episode: EpisodeDetail, tv: TVSeriesDetail) {
         playErrorMessage = nil
-        HapticManager.shared.mediumImpact()
+        HapticManager.shared.impactStrong()
 
         guard let url = StreamingProviderURLBuilder.tvURL(
             tmdbId: tv.id,

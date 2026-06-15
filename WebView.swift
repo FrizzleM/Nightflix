@@ -34,6 +34,13 @@ struct WebView: UIViewRepresentable {
                 forMainFrameOnly: true
             )
         )
+        contentController.addUserScript(
+            WKUserScript(
+                source: Self.resumeLoopGuardScript,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true
+            )
+        )
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -66,6 +73,84 @@ struct WebView: UIViewRepresentable {
             } catch (e) {}
         }
         window.addEventListener("message", function (event) { forward(event.data); }, false);
+    })();
+    """
+
+    /// Works around a Vidking player bug: when the embed is opened with a `progress`
+    /// (resume) start time, the player re-applies that exact seek on *every* playback
+    /// tick, which snaps the video back and makes it loop on the resume second.
+    ///
+    /// We intercept the `<video>` element's `currentTime` setter and only honor a seek
+    /// to the resume value when it's a genuine (re)start:
+    ///   * the first resume after load, and
+    ///   * after a real jump back toward the start — e.g. iOS reloads the HLS media and
+    ///     resets to 0:00 when handing off to the native full-screen player.
+    /// The per-tick repeats (which arrive while playback is already at/after the resume
+    /// point) are ignored, so playback runs forward normally. Because those repeats are
+    /// suppressed, `currentTime` only ever falls below the furthest-watched mark on a
+    /// real reload, which is exactly how we tell the two cases apart. Ordinary playback,
+    /// scrubbing and ±10s skips are untouched — they never seek to the exact resume value.
+    private static let resumeLoopGuardScript = """
+    (function () {
+        var params = new URLSearchParams(window.location.search);
+        var raw = params.get("progress");
+        var resumeTime = raw ? parseFloat(raw) : NaN;
+        if (!(resumeTime > 0)) { return; }
+
+        var proto = window.HTMLMediaElement && HTMLMediaElement.prototype;
+        var descriptor = proto && Object.getOwnPropertyDescriptor(proto, "currentTime");
+        if (!descriptor || !descriptor.get || !descriptor.set) { return; }
+
+        function guard(video) {
+            if (!video || video.__nightflixResumeGuarded) { return; }
+            video.__nightflixResumeGuarded = true;
+
+            var furthest = 0;        // high-water mark of real playback progress
+            var everResumed = false; // has the initial resume seek been applied?
+
+            video.addEventListener("timeupdate", function () {
+                var t = descriptor.get.call(video);
+                if (t > furthest) { furthest = t; }
+            });
+
+            Object.defineProperty(video, "currentTime", {
+                configurable: true,
+                get: function () { return descriptor.get.call(this); },
+                set: function (value) {
+                    if (value === resumeTime) {
+                        var current = descriptor.get.call(this);
+                        if (!everResumed) {
+                            everResumed = true;
+                            descriptor.set.call(this, Math.max(resumeTime, furthest));
+                            return;
+                        }
+                        // Only re-seek after a real jump back toward the start
+                        // (e.g. native full-screen reload), not the buggy repeats.
+                        if (current < furthest - 5) {
+                            descriptor.set.call(this, Math.max(resumeTime, furthest));
+                        }
+                        return;
+                    }
+                    descriptor.set.call(this, value);
+                }
+            });
+        }
+
+        function guardAll() {
+            var videos = document.getElementsByTagName("video");
+            for (var i = 0; i < videos.length; i++) { guard(videos[i]); }
+        }
+
+        guardAll();
+        if (window.MutationObserver) {
+            new MutationObserver(guardAll).observe(document.documentElement, {
+                childList: true,
+                subtree: true
+            });
+        } else {
+            var interval = setInterval(guardAll, 200);
+            setTimeout(function () { clearInterval(interval); }, 30000);
+        }
     })();
     """
 

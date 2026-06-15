@@ -118,7 +118,7 @@ struct MainTabView: View {
             }
         }
         .onChange(of: selectedTab) { _, newValue in
-            HapticManager.shared.selection()
+            HapticManager.shared.tabChange()
             replayEntranceAnimation(for: newValue)
         }
         .onAppear {

@@ -243,7 +243,7 @@ struct FeedView: View {
                         action: { playContinueWatching(item) }
                     )
                     .scrollHapticCard(index: index, coordinateSpaceName: "continue-watching-row")
-                    .nightflixEntrance(isVisible: showContent, delay: cardDelay(index, baseDelay: baseDelay + 0.06), yOffset: 12, animationsEnabled: contentAnimationsEnabled)
+                    .nightflixEntrance(isVisible: showContent, delay: cardDelay(index, baseDelay: baseDelay + 0.06), yOffset: 12, animationsEnabled: contentAnimationsEnabled, onceKey: cardOnceKey("continue-watching-row", item.id.uuidString))
                 }
             }
         }
@@ -285,7 +285,7 @@ struct FeedView: View {
                     action: { selectedDetailItem = item.mediaItem }
                 )
                 .scrollHapticCard(index: index, coordinateSpaceName: coordinateSpaceName)
-                .nightflixEntrance(isVisible: showContent, delay: cardDelay(index, baseDelay: baseDelay + 0.06), yOffset: 12, animationsEnabled: contentAnimationsEnabled)
+                .nightflixEntrance(isVisible: showContent, delay: cardDelay(index, baseDelay: baseDelay + 0.06), yOffset: 12, animationsEnabled: contentAnimationsEnabled, onceKey: cardOnceKey(coordinateSpaceName, String(item.id)))
             }
         }
     }
@@ -295,7 +295,7 @@ struct FeedView: View {
         VStack(alignment: .leading, spacing: NightflixLayout.sectionHeaderSpacing) {
             SectionHeaderView(title: "Because you watched…")
                 .padding(.horizontal, NightflixLayout.screenPadding)
-                .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
+                .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled, onceKey: sectionTitleOnceKey("Because you watched…"))
 
             loadingRow
                 .nightflixEntrance(isVisible: showContent, delay: baseDelay + 0.05, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
@@ -311,7 +311,7 @@ struct FeedView: View {
         VStack(alignment: .leading, spacing: NightflixLayout.sectionHeaderSpacing) {
             SectionHeaderView(title: "Top 10 This Week")
                 .padding(.horizontal, NightflixLayout.screenPadding)
-                .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
+                .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled, onceKey: sectionTitleOnceKey("Top 10 This Week"))
 
             if let errorMessage = section.errorMessage, section.items.isEmpty {
                 messageRow(errorMessage, systemImage: "info.circle.fill")
@@ -331,7 +331,7 @@ struct FeedView: View {
                                 action: { selectedDetailItem = item.mediaItem }
                             )
                             .scrollHapticCard(index: index, coordinateSpaceName: coordinateSpaceName)
-                            .nightflixEntrance(isVisible: showContent, delay: cardDelay(index, baseDelay: baseDelay + 0.06), yOffset: 12, animationsEnabled: contentAnimationsEnabled)
+                            .nightflixEntrance(isVisible: showContent, delay: cardDelay(index, baseDelay: baseDelay + 0.06), yOffset: 12, animationsEnabled: contentAnimationsEnabled, onceKey: cardOnceKey(coordinateSpaceName, String(item.id)))
                         }
                     }
                     .padding(.horizontal, NightflixLayout.screenPadding)
@@ -350,7 +350,7 @@ struct FeedView: View {
         VStack(alignment: .leading, spacing: NightflixLayout.sectionHeaderSpacing) {
             SectionHeaderView(title: title)
                 .padding(.horizontal, NightflixLayout.screenPadding)
-                .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
+                .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled, onceKey: sectionTitleOnceKey(title))
 
             if let errorMessage = section.errorMessage {
                 messageRow(errorMessage, systemImage: "info.circle.fill")
@@ -369,7 +369,7 @@ struct FeedView: View {
                                 action: { selectedDetailItem = item.mediaItem }
                             )
                             .scrollHapticCard(index: index, coordinateSpaceName: coordinateSpaceName)
-                            .nightflixEntrance(isVisible: showContent, delay: cardDelay(index, baseDelay: baseDelay + 0.06), yOffset: 12, animationsEnabled: contentAnimationsEnabled)
+                            .nightflixEntrance(isVisible: showContent, delay: cardDelay(index, baseDelay: baseDelay + 0.06), yOffset: 12, animationsEnabled: contentAnimationsEnabled, onceKey: cardOnceKey(coordinateSpaceName, String(item.id)))
                         }
                     }
                     .padding(.horizontal, NightflixLayout.screenPadding)
@@ -392,7 +392,7 @@ struct FeedView: View {
         VStack(alignment: .leading, spacing: NightflixLayout.sectionHeaderSpacing) {
             SectionHeaderView(title: title)
                 .padding(.horizontal, NightflixLayout.screenPadding)
-                .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
+                .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled, onceKey: sectionTitleOnceKey(title))
 
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: NightflixLayout.rowItemSpacing) {
@@ -588,6 +588,22 @@ struct FeedView: View {
         }
     }
 
+    /// Stable, session-scoped key so a section title's fade-in plays only once:
+    /// after the first time, scrolling it out of the lazy stack and back keeps it
+    /// shown instead of replaying the animation. Titles are unique across the feed.
+    private func sectionTitleOnceKey(_ title: String) -> String {
+        "feed-section-title-\(title)"
+    }
+
+    /// Stable, session-scoped key so a card's fade-in plays only once: after the
+    /// first time, scrolling its row out of the lazy stacks (vertically or
+    /// horizontally) and back keeps it shown instead of replaying. Scoped by the
+    /// row's coordinate space so the same title appearing in two rows still
+    /// animates in each.
+    private func cardOnceKey(_ coordinateSpaceName: String, _ itemId: String) -> String {
+        "feed-card-\(coordinateSpaceName)-\(itemId)"
+    }
+
     private func cardDelay(_ index: Int, baseDelay: Double) -> Double {
         baseDelay + min(Double(index) * 0.055, 0.44)
     }
@@ -654,7 +670,11 @@ struct FeedView: View {
 
     private func toggleHeroMyList(_ item: MediaItem) {
         guard let listItem = MyListItem(mediaItem: item) else { return }
-        HapticManager.shared.lightImpact()
+        if myListManager.contains(mediaType: listItem.mediaType, tmdbId: listItem.tmdbId) {
+            HapticManager.shared.toggleOff()
+        } else {
+            HapticManager.shared.bloom()
+        }
         myListManager.toggle(listItem)
     }
 

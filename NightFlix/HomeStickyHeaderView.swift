@@ -52,16 +52,11 @@ struct HomeStickyHeaderView: View {
             .padding(.horizontal, 20)
             .frame(height: Self.contentHeight, alignment: .center)
             .animation(searchShortcutAnimation, value: showSearchShortcut)
-
-            Rectangle()
-                .fill(headerDividerColor)
-                .frame(height: 1)
         }
         .frame(maxWidth: .infinity, alignment: .top)
         .background(alignment: .top) {
             headerBackground
         }
-        .shadow(color: headerShadowColor, radius: 18, y: 10)
         .onAppear {
             updateTitleGlowVisibility(for: backgroundProgress, animated: false)
         }
@@ -118,32 +113,64 @@ struct HomeStickyHeaderView: View {
         .accessibilityLabel("Back to search")
     }
 
-    @ViewBuilder
     private var headerBackground: some View {
-        if colorScheme == .dark {
-            ZStack(alignment: .bottom) {
-                Color.black
-                    .opacity(0.92 * backgroundProgress)
+        // iOS-style translucent nav bar: a frosted material that blurs the feed
+        // scrolling underneath, with a top-weighted tint to keep the wordmark
+        // legible over bright posters. The bottom edge feathers out over a tall
+        // run into the content rather than ending on a hard rectangle.
+        let topInset = max(topSafeArea, 0)
+        let solidHeight = topInset + headerContentHeight
+        let totalHeight = solidHeight + bottomFadeHeight
+        let solidFraction = solidHeight / totalHeight
 
+        return Rectangle()
+            .fill(.ultraThinMaterial)
+            .overlay {
                 LinearGradient(
-                    colors: [
-                        Color.black.opacity(0.98),
-                        Color.black.opacity(0.94),
-                        Color.black.opacity(0.82)
+                    stops: tintStops(solidFraction: solidFraction),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+            .frame(height: totalHeight)
+            .mask {
+                LinearGradient(
+                    stops: [
+                        .init(color: .black, location: 0),
+                        .init(color: .black, location: solidFraction),
+                        .init(color: .clear, location: 1)
                     ],
                     startPoint: .top,
                     endPoint: .bottom
                 )
-                .opacity(backgroundProgress)
             }
-            .frame(height: max(topSafeArea, 0) + headerContentHeight + 1)
+            .opacity(backgroundProgress)
             .ignoresSafeArea(edges: .top)
-        } else {
-            Color.white
-                .opacity(backgroundProgress)
-                .frame(height: max(topSafeArea, 0) + headerContentHeight + 1)
-                .ignoresSafeArea(edges: .top)
+    }
+
+    // Tall fade run so the blur extends well down the feed before dissolving.
+    private var bottomFadeHeight: CGFloat {
+        150
+    }
+
+    /// Darkening tint. In dark mode it stays dark across the whole length so the
+    /// blur tone is even top-to-bottom — the mask's alpha alone fades the tail,
+    /// instead of the bare (lighter) material showing through lower down. Light
+    /// mode is left subtle and clears within the title region as before.
+    private func tintStops(solidFraction: CGFloat) -> [Gradient.Stop] {
+        if colorScheme == .dark {
+            return [
+                .init(color: .black.opacity(0.84), location: 0),
+                .init(color: .black.opacity(0.64), location: solidFraction),
+                .init(color: .black.opacity(0.60), location: 1)
+            ]
         }
+
+        return [
+            .init(color: .white.opacity(0.32), location: 0),
+            .init(color: .white.opacity(0.10), location: solidFraction * 0.7),
+            .init(color: .white.opacity(0), location: solidFraction)
+        ]
     }
 
     private var backgroundProgress: CGFloat {
@@ -176,19 +203,6 @@ struct HomeStickyHeaderView: View {
         }
 
         return NightFlixStyle.primaryTextColor
-    }
-
-    private var headerDividerColor: Color {
-        if colorScheme == .dark {
-            return Color.white.opacity(0.08 * backgroundProgress)
-        }
-
-        return Color.black.opacity(0.22 * backgroundProgress)
-    }
-
-    private var headerShadowColor: Color {
-        let opacity = colorScheme == .dark ? 0.3 : 0.08
-        return .black.opacity(opacity * backgroundProgress)
     }
 
     private var titleGlowOpacity: CGFloat {
@@ -244,6 +258,7 @@ struct HomeStickyHeaderView: View {
                 }
 
                 if didTap {
+                    HapticManager.shared.pop()
                     onHomeTitle()
                 }
             }

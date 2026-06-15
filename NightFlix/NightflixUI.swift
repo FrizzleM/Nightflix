@@ -23,6 +23,8 @@ enum NightflixLayout {
 // MARK: - Pressable button style
 
 /// Subtle press-scale used for tappable artwork, mirroring Netflix's tile feedback.
+/// The haptic is fired once by the button's action, so a press feels like a single
+/// crisp tick rather than a press-down/release double.
 struct NightflixPressableStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var pressedScale: CGFloat = 0.93
@@ -146,7 +148,7 @@ struct PosterCard: View {
 
     var body: some View {
         Button {
-            HapticManager.shared.mediumImpact()
+            HapticManager.shared.pop()
             action()
         } label: {
             VStack(spacing: 0) {
@@ -203,7 +205,7 @@ struct Top10PosterCard: View {
 
     var body: some View {
         Button {
-            HapticManager.shared.mediumImpact()
+            HapticManager.shared.pop()
             action()
         } label: {
             HStack(alignment: .bottom, spacing: -14) {
@@ -253,7 +255,7 @@ struct ContinueWatchingTile: View {
 
     var body: some View {
         Button {
-            HapticManager.shared.mediumImpact()
+            HapticManager.shared.pop()
             action()
         } label: {
             VStack(alignment: .leading, spacing: 7) {

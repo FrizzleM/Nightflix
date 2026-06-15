@@ -244,7 +244,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     appearanceSection
                     accentColorSection
-                    animationsSection
+                    apiKeyLink
                     updatesSection
 
                     VStack(spacing: 12) {
@@ -393,30 +393,41 @@ struct SettingsView: View {
         )
     }
 
-    private var animationsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Animations")
-                .font(.headline)
-                .foregroundStyle(NightFlixStyle.primaryTextColor)
+    private var apiKeyLink: some View {
+        NavigationLink {
+            TMDBAPIKeyView()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "key.fill")
+                    .font(.headline)
+                    .foregroundStyle(NightFlixStyle.accentColor)
+                    .frame(width: 24)
 
-            Picker("Animations", selection: animationModeBinding) {
-                ForEach(AppAnimationMode.allCases) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
+                Text("TMDB API Key")
+                    .font(.headline)
+                    .foregroundStyle(NightFlixStyle.primaryTextColor)
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(NightFlixStyle.secondaryTextColor)
             }
-            .pickerStyle(.segmented)
-
-            Toggle("Skip intro animation", isOn: skipIntroAnimationBinding)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(NightFlixStyle.primaryTextColor)
-                .tint(NightFlixStyle.accentColor)
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(NightFlixStyle.borderColor, lineWidth: 1)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
-        .padding(16)
-        .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(NightFlixStyle.borderColor, lineWidth: 1)
-        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(TapGesture().onEnded {
+            HapticManager.shared.selection()
+        })
+        .accessibilityLabel("TMDB API Key")
+        .accessibilityHint("Opens a page to set a custom TMDB API key.")
     }
 
     private var updatesSection: some View {
@@ -445,28 +456,6 @@ struct SettingsView: View {
                 guard settings.appearance != newValue else { return }
                 HapticManager.shared.selection()
                 settings.appearance = newValue
-            }
-        )
-    }
-
-    private var animationModeBinding: Binding<AppAnimationMode> {
-        Binding(
-            get: { settings.animationMode },
-            set: { newValue in
-                guard settings.animationMode != newValue else { return }
-                HapticManager.shared.selection()
-                settings.animationMode = newValue
-            }
-        )
-    }
-
-    private var skipIntroAnimationBinding: Binding<Bool> {
-        Binding(
-            get: { settings.skipIntroAnimation },
-            set: { newValue in
-                guard settings.skipIntroAnimation != newValue else { return }
-                HapticManager.shared.selection()
-                settings.skipIntroAnimation = newValue
             }
         )
     }
@@ -585,6 +574,131 @@ struct SettingsView: View {
             await MainActor.run {
                 self.cacheSizeBytes = cacheSizeBytes
             }
+        }
+    }
+}
+
+struct TMDBAPIKeyView: View {
+    @EnvironmentObject private var settings: AppSettingsManager
+    @State private var tmdbKeyInput = ""
+    @State private var tmdbKeyError: String?
+    @FocusState private var isFieldFocused: Bool
+
+    var body: some View {
+        ZStack {
+            NightFlixStyle.backgroundColor.ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    keyCard
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 130)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .navigationTitle("TMDB API Key")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
+        .tint(NightFlixStyle.accentColor)
+        .onAppear {
+            tmdbKeyInput = settings.customTMDBCredentialOverride
+        }
+    }
+
+    private var keyCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Nightflix includes a built-in TMDB Read Access Token. Paste your own (v4 auth) if the default ever stops working — it applies to new requests.")
+                .font(.footnote)
+                .foregroundStyle(NightFlixStyle.secondaryTextColor)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                Image(systemName: settings.isUsingCustomTMDBCredential ? "key.fill" : "checkmark.seal.fill")
+                    .foregroundStyle(settings.isUsingCustomTMDBCredential ? NightFlixStyle.accentColor : NightFlixStyle.secondaryTextColor)
+                Text(settings.isUsingCustomTMDBCredential ? "Using your custom key" : "Using the default key")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(NightFlixStyle.primaryTextColor)
+            }
+
+            TextField("Paste TMDB Read Access Token", text: $tmdbKeyInput, axis: .vertical)
+                .lineLimit(1...5)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .focused($isFieldFocused)
+                .nightFlixInputFieldStyle()
+
+            if let tmdbKeyError {
+                Label(tmdbKeyError, systemImage: "exclamationmark.triangle.fill")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(NightFlixStyle.accentColor)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Button {
+                saveTMDBKey()
+            } label: {
+                Text("Save API Key")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(NightFlixStyle.accentColor, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                restoreDefaultTMDBKey()
+            } label: {
+                settingsOutlineButtonLabel(
+                    title: "Restore Default API Key",
+                    systemImage: "arrow.counterclockwise",
+                    accessibilityHint: "Removes your custom token and reverts to the built-in default key."
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(!settings.isUsingCustomTMDBCredential)
+            .opacity(settings.isUsingCustomTMDBCredential ? 1 : 0.5)
+        }
+        .padding(16)
+        .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(NightFlixStyle.borderColor, lineWidth: 1)
+        }
+    }
+
+    private func saveTMDBKey() {
+        let trimmed = tmdbKeyInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        isFieldFocused = false
+
+        guard !trimmed.isEmpty else {
+            restoreDefaultTMDBKey()
+            return
+        }
+
+        guard NightFlixUserConfiguration.isValidTMDBReadAccessToken(trimmed) else {
+            HapticManager.shared.error()
+            tmdbKeyError = "That doesn't look like a valid TMDB Read Access Token."
+            return
+        }
+
+        tmdbKeyError = nil
+        settings.tmdbCredential = trimmed
+        tmdbKeyInput = settings.customTMDBCredentialOverride
+        HapticManager.shared.success()
+    }
+
+    private func restoreDefaultTMDBKey() {
+        let wasCustom = settings.isUsingCustomTMDBCredential
+        settings.resetTMDBCredential()
+        tmdbKeyInput = ""
+        tmdbKeyError = nil
+        isFieldFocused = false
+
+        if wasCustom {
+            HapticManager.shared.success()
         }
     }
 }
