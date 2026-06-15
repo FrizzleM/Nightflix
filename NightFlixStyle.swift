@@ -38,9 +38,52 @@ enum AppSettingsStorageKey {
     static let hasCompletedInitialSetup = "hasCompletedInitialSetup"
     static let tmdbCredential = "tmdbCredential"
     static let streamingProviderBaseURL = "streamingProviderBaseURL"
+    static let accentColorHex = "accentColorHex"
 }
 
 enum NightFlixUserConfiguration {
+    /// Credentials are baked in — the app requires no setup or user input.
+    static let defaultTMDBCredential = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MTNlY2VkZmQ1NmVkNDZiMDBiZTg1N2Q3ODg3NTE1MSIsIm5iZiI6MTc3OTYyMzA4Mi4xNzUsInN1YiI6IjZhMTJlNGFhOWFkOWYxOWE3ZWE5Y2NiZiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.8g0u3KwAVxnWszrKGfqvxrUl0VuG-_e0ZvTv5xDVRd4"
+    static let defaultStreamingProviderBaseURL = "vidking.net"
+    /// The original Nightflix red, used when no custom accent has been chosen.
+    static let defaultAccentColorHex = "e50914"
+
+    /// The effective TMDB token: a user-saved override if valid, otherwise the baked-in default.
+    static var effectiveTMDBCredential: String {
+        let stored = normalizedTMDBCredential(
+            from: UserDefaults.standard.string(forKey: AppSettingsStorageKey.tmdbCredential) ?? ""
+        )
+        return isValidTMDBReadAccessToken(stored) ? stored : normalizedTMDBCredential(from: defaultTMDBCredential)
+    }
+
+    /// The effective provider URL: a user-saved override if present, otherwise the baked-in default.
+    static var effectiveStreamingProviderBaseURL: String {
+        let stored = normalizedStreamingProviderBaseURL(
+            from: UserDefaults.standard.string(forKey: AppSettingsStorageKey.streamingProviderBaseURL) ?? ""
+        )
+        return stored.isEmpty ? normalizedStreamingProviderBaseURL(from: defaultStreamingProviderBaseURL) : stored
+    }
+
+    /// The effective accent colour as a 6-digit hex string (no `#`): the user's chosen
+    /// colour when set and valid, otherwise the default Nightflix red.
+    static var effectiveAccentColorHex: String {
+        let stored = normalizedAccentColorHex(
+            from: UserDefaults.standard.string(forKey: AppSettingsStorageKey.accentColorHex) ?? ""
+        )
+        return stored.isEmpty ? defaultAccentColorHex : stored
+    }
+
+    /// Normalises an accent colour input to a bare lowercase 6-digit hex string, or "" when invalid.
+    static func normalizedAccentColorHex(from rawValue: String) -> String {
+        let trimmed = rawValue
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "#", with: "")
+            .lowercased()
+
+        guard trimmed.count == 6, trimmed.allSatisfy(\.isHexDigit) else { return "" }
+        return trimmed
+    }
+
     static func normalizedTMDBCredential(from rawValue: String) -> String {
         var trimmedValue = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -84,6 +127,7 @@ final class AppSettingsManager: ObservableObject {
     @AppStorage(AppSettingsStorageKey.hasCompletedInitialSetup) private var hasCompletedInitialSetupStorage = false
     @AppStorage(AppSettingsStorageKey.tmdbCredential) private var tmdbCredentialStorage = ""
     @AppStorage(AppSettingsStorageKey.streamingProviderBaseURL) private var streamingProviderBaseURLStorage = ""
+    @AppStorage(AppSettingsStorageKey.accentColorHex) private var accentColorHexStorage = ""
     @Published private(set) var shutdownCountdown: Int?
 
     var appearance: AppAppearance {
@@ -138,7 +182,7 @@ final class AppSettingsManager: ObservableObject {
 
     var tmdbCredential: String {
         get {
-            NightFlixUserConfiguration.normalizedTMDBCredential(from: tmdbCredentialStorage)
+            NightFlixUserConfiguration.effectiveTMDBCredential
         }
         set {
             objectWillChange.send()
@@ -148,12 +192,36 @@ final class AppSettingsManager: ObservableObject {
 
     var streamingProviderBaseURL: String {
         get {
-            NightFlixUserConfiguration.normalizedStreamingProviderBaseURL(from: streamingProviderBaseURLStorage)
+            NightFlixUserConfiguration.effectiveStreamingProviderBaseURL
         }
         set {
             objectWillChange.send()
             streamingProviderBaseURLStorage = NightFlixUserConfiguration.normalizedStreamingProviderBaseURL(from: newValue)
         }
+    }
+
+    /// The chosen accent colour as a bare hex string (no `#`).
+    var accentColorHex: String {
+        get {
+            NightFlixUserConfiguration.effectiveAccentColorHex
+        }
+        set {
+            let normalized = NightFlixUserConfiguration.normalizedAccentColorHex(from: newValue)
+            guard !normalized.isEmpty, normalized != accentColorHexStorage else { return }
+            objectWillChange.send()
+            accentColorHexStorage = normalized
+        }
+    }
+
+    /// The chosen accent colour as a SwiftUI `Color`.
+    var accentColor: Color {
+        Color(hex: accentColorHex)
+    }
+
+    func resetAccentColor() {
+        guard !accentColorHexStorage.isEmpty else { return }
+        objectWillChange.send()
+        accentColorHexStorage = ""
     }
 
     var hasConfiguredTMDBCredential: Bool {
@@ -231,10 +299,72 @@ extension Color {
 
         self.init(red: red, green: green, blue: blue)
     }
+
+    /// A bare lowercase 6-digit hex string (no `#`) for the colour's RGB components.
+    var nightflixHexString: String {
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        UIColor(self).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+
+        let clamp = { (component: CGFloat) -> Int in min(max(Int((component * 255).rounded()), 0), 255) }
+        return String(format: "%02x%02x%02x", clamp(red), clamp(green), clamp(blue))
+    }
+}
+
+/// A named accent colour the user can pick from in Settings.
+struct NightflixAccentOption: Identifiable, Hashable {
+    let name: String
+    let hex: String
+
+    var id: String { hex }
+    var color: Color { Color(hex: hex) }
+}
+
+enum NightflixAccentPalette {
+    /// The curated presets, with the default Nightflix red first.
+    static let presets: [NightflixAccentOption] = [
+        NightflixAccentOption(name: "Nightflix Red", hex: NightFlixUserConfiguration.defaultAccentColorHex),
+        NightflixAccentOption(name: "Sunset", hex: "ff6a00"),
+        NightflixAccentOption(name: "Gold", hex: "f5c518"),
+        NightflixAccentOption(name: "Emerald", hex: "1db954"),
+        NightflixAccentOption(name: "Teal", hex: "00b8d4"),
+        NightflixAccentOption(name: "Azure", hex: "2f80ff"),
+        NightflixAccentOption(name: "Violet", hex: "9146ff"),
+        NightflixAccentOption(name: "Magenta", hex: "ff2d92")
+    ]
+
+    static func isPreset(_ hex: String) -> Bool {
+        presets.contains { $0.hex.caseInsensitiveCompare(hex) == .orderedSame }
+    }
+}
+
+/// SwiftUI environment carrier for the accent colour. Reusable leaf views (badges,
+/// progress bars) read this instead of the `NightFlixStyle.accentColor` static so they
+/// re-render the instant the user changes the colour, rather than staying cached.
+private struct NightflixAccentEnvironmentKey: EnvironmentKey {
+    static var defaultValue: Color { NightFlixStyle.accentColor }
+}
+
+extension EnvironmentValues {
+    var nightflixAccent: Color {
+        get { self[NightflixAccentEnvironmentKey.self] }
+        set { self[NightflixAccentEnvironmentKey.self] = newValue }
+    }
 }
 
 enum NightFlixStyle {
-    static let accentColor = Color(hex: "e50914")
+    /// The app-wide accent. Resolves to the user's chosen colour (or the default red),
+    /// so every call site updates automatically when the setting changes.
+    static var accentColor: Color {
+        Color(hex: NightFlixUserConfiguration.effectiveAccentColorHex)
+    }
+
+    /// The accent as a `UIColor`, for building dynamic (light/dark) derivatives.
+    static var accentUIColor: UIColor {
+        UIColor(accentColor)
+    }
     static let backgroundColor = Color.dynamic(light: .systemBackground, dark: .black)
     static let cardColor = Color.dynamic(light: .secondarySystemBackground, dark: UIColor(red: 27 / 255, green: 27 / 255, blue: 31 / 255, alpha: 1))
     static let fieldColor = Color.dynamic(light: .tertiarySystemBackground, dark: .black.withAlphaComponent(0.35))
@@ -245,8 +375,13 @@ enum NightFlixStyle {
     static let borderColor = Color.dynamic(light: .separator.withAlphaComponent(0.35), dark: .white.withAlphaComponent(0.07))
     static let prominentBorderColor = Color.dynamic(light: .separator.withAlphaComponent(0.45), dark: .white.withAlphaComponent(0.09))
     static let subtleFillColor = Color.dynamic(light: .systemGray5, dark: .white.withAlphaComponent(0.06))
-    static let titleGlowColor = Color.dynamic(light: .clear, dark: UIColor(red: 229 / 255, green: 9 / 255, blue: 20 / 255, alpha: 0.95))
-    static let titleSecondaryGlowColor = Color.dynamic(light: .clear, dark: UIColor(red: 229 / 255, green: 9 / 255, blue: 20 / 255, alpha: 0.55))
+    /// The glow behind the Nightflix wordmark — follows the accent colour (dark mode only).
+    static var titleGlowColor: Color {
+        Color.dynamic(light: .clear, dark: accentUIColor.withAlphaComponent(0.95))
+    }
+    static var titleSecondaryGlowColor: Color {
+        Color.dynamic(light: .clear, dark: accentUIColor.withAlphaComponent(0.55))
+    }
 
     static func textColor(darkOpacity: CGFloat, light: UIColor = .secondaryLabel) -> Color {
         Color.dynamic(light: light, dark: .white.withAlphaComponent(darkOpacity))
@@ -293,21 +428,19 @@ enum StreamingProviderURLBuilder {
 
     static let configurationErrorMessage = "Add a movie provider URL in Settings before playing."
 
-    static func movieURL(tmdbId: Int) -> URL? {
-        url(appending: "/embed/movie/\(tmdbId)")
+    static func movieURL(tmdbId: Int, progressSeconds: Int? = nil) -> URL? {
+        url(appending: "/embed/movie/\(tmdbId)", progressSeconds: progressSeconds)
     }
 
-    static func tvURL(tmdbId: Int, season: Int, episode: Int) -> URL? {
-        url(appending: "/embed/tv/\(tmdbId)/\(season)/\(episode)")
+    static func tvURL(tmdbId: Int, season: Int, episode: Int, progressSeconds: Int? = nil) -> URL? {
+        url(appending: "/embed/tv/\(tmdbId)/\(season)/\(episode)", progressSeconds: progressSeconds)
     }
 
     private static var providerBaseURL: String {
-        NightFlixUserConfiguration.normalizedStreamingProviderBaseURL(
-            from: UserDefaults.standard.string(forKey: AppSettingsStorageKey.streamingProviderBaseURL) ?? ""
-        )
+        NightFlixUserConfiguration.effectiveStreamingProviderBaseURL
     }
 
-    private static func url(appending embedPath: String) -> URL? {
+    private static func url(appending embedPath: String, progressSeconds: Int?) -> URL? {
         guard !providerBaseURL.isEmpty,
               var components = URLComponents(string: providerBaseURL),
               components.scheme != nil,
@@ -322,13 +455,19 @@ enum StreamingProviderURLBuilder {
             .joined(separator: "/")
 
         components.path = "/\(combinedPath)"
-        components.queryItems = (components.queryItems ?? []) + fixedPlaybackQueryItems
+
+        var queryItems = (components.queryItems ?? []) + fixedPlaybackQueryItems
+        if let progressSeconds, progressSeconds > 0 {
+            queryItems.append(URLQueryItem(name: "progress", value: String(progressSeconds)))
+        }
+        components.queryItems = queryItems
+
         return components.url
     }
 
     private static var fixedPlaybackQueryItems: [URLQueryItem] {
         [
-            URLQueryItem(name: "color", value: "e50914"),
+            URLQueryItem(name: "color", value: NightFlixUserConfiguration.effectiveAccentColorHex),
             URLQueryItem(name: "autoPlay", value: "true"),
             URLQueryItem(name: "nextEpisode", value: "true"),
             URLQueryItem(name: "episodeSelector", value: "true")

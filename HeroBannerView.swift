@@ -2,189 +2,153 @@ import SwiftUI
 
 struct HeroBannerView: View {
     let item: MediaItem
-    let onPrimaryAction: (MediaItem) -> Void
+    @ObservedObject var myListManager: MyListManager
+    let onPlay: (MediaItem) -> Void
+    let onMyList: (MediaItem) -> Void
     let onMoreInfo: (MediaItem) -> Void
+
+    /// Ratio of width to height. Slightly taller than wide for a portrait billboard.
+    private let heroAspectRatio: CGFloat = 0.76
 
     var body: some View {
         Color.clear
-        .frame(maxWidth: .infinity)
-        .aspectRatio(16.0 / 10.5, contentMode: .fit)
-        .frame(minHeight: 280, maxHeight: 360)
-        .overlay {
-            GeometryReader { proxy in
-                let bannerWidth = proxy.size.width
-                let bannerHeight = proxy.size.height
-                let horizontalPadding: CGFloat = bannerWidth < 360 ? 16 : 20
-                let availableContentWidth = max(0, bannerWidth - horizontalPadding * 2)
-                let contentWidth = min(availableContentWidth, bannerWidth * 0.74)
-                let titleSize = min(34, max(28, bannerWidth * 0.082))
+            .aspectRatio(heroAspectRatio, contentMode: .fit)
+            .overlay {
+                GeometryReader { proxy in
+                    let width = proxy.size.width
+                    let height = proxy.size.height
 
-                ZStack(alignment: .bottomLeading) {
-                    HeroBackdropImage(item: item)
-                        .frame(width: bannerWidth, height: bannerHeight)
-                        .clipped()
+                    ZStack(alignment: .bottom) {
+                        HeroArtworkImage(item: item)
+                            .frame(width: width, height: height)
+                            .clipped()
 
-                    LinearGradient(
-                        colors: [
-                            .black.opacity(0.72),
-                            .black.opacity(0.42),
-                            .black.opacity(0.08),
-                            .clear
-                        ],
-                        startPoint: .bottom,
-                        endPoint: .top
-                    )
-                    .frame(width: bannerWidth, height: bannerHeight)
+                        topScrim
+                        bottomScrim(height: height)
 
-                    LinearGradient(
-                        colors: [
-                            .black.opacity(0.58),
-                            .black.opacity(0.24),
-                            .clear
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .frame(width: bannerWidth, height: bannerHeight)
-
-                    VStack(alignment: .leading, spacing: 7) {
-                        metadata(contentWidth: contentWidth)
-                        title(size: titleSize)
-                        overview
-                        actions(contentWidth: contentWidth)
+                        VStack(spacing: 12) {
+                            metadataLine
+                            actionRow
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.bottom, 22)
+                        .frame(width: width)
                     }
-                    .frame(width: contentWidth, alignment: .leading)
-                    .padding(.horizontal, horizontalPadding)
-                    .padding(.bottom, 16)
+                    .frame(width: width, height: height)
                 }
-                .frame(width: bannerWidth, height: bannerHeight)
             }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(.white.opacity(0.10), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.24), radius: 22, y: 12)
-        .accessibilityElement(children: .contain)
+            .accessibilityElement(children: .contain)
     }
 
-    private func metadata(contentWidth: CGFloat) -> some View {
-        HStack(spacing: 6) {
-            Text("Featured")
-                .font(.caption2.weight(.black))
-                .textCase(.uppercase)
+    // MARK: Scrims
+
+    private var topScrim: some View {
+        LinearGradient(
+            colors: [.black.opacity(0.45), .clear],
+            startPoint: .top,
+            endPoint: .center
+        )
+    }
+
+    private func bottomScrim(height: CGFloat) -> some View {
+        LinearGradient(
+            colors: [
+                .clear,
+                NightFlixStyle.backgroundColor.opacity(0.35),
+                NightFlixStyle.backgroundColor.opacity(0.85),
+                NightFlixStyle.backgroundColor
+            ],
+            startPoint: .center,
+            endPoint: .bottom
+        )
+        .frame(height: height * 0.7)
+        .frame(maxHeight: .infinity, alignment: .bottom)
+    }
+
+    // MARK: Metadata
+
+    private var metadataLine: some View {
+        HStack(spacing: 7) {
+            NightflixBadge(text: "Featured", filled: true)
+
+            Text(metadataText)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white.opacity(0.92))
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(NightFlixStyle.accentColor, in: Capsule())
-
-            Text(item.type.displayName)
-                .font(.caption2.weight(.bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .foregroundStyle(.white.opacity(0.90))
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(.white.opacity(0.15), in: Capsule())
-
-            if let year = item.displayYear, !year.isEmpty {
-                Text(year)
-                    .font(.caption2.weight(.bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .foregroundStyle(.white.opacity(0.86))
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(.white.opacity(0.12), in: Capsule())
-            }
-        }
-        .frame(width: contentWidth, alignment: .leading)
-    }
-
-    private func title(size: CGFloat) -> some View {
-        Text(item.displayTitle)
-            .font(.system(size: size, weight: .black, design: .rounded))
-            .foregroundStyle(.white)
-            .lineLimit(2)
-            .truncationMode(.tail)
-            .minimumScaleFactor(0.80)
-            .shadow(color: .black.opacity(0.55), radius: 7, y: 3)
-    }
-
-    @ViewBuilder
-    private var overview: some View {
-        if !item.overview.isEmpty {
-            Text(item.overview)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.80))
-                .lineLimit(2)
-                .truncationMode(.tail)
-                .shadow(color: .black.opacity(0.5), radius: 5, y: 2)
+                .minimumScaleFactor(0.8)
+                .shadow(color: .black.opacity(0.6), radius: 6, y: 2)
         }
     }
 
-    private func actions(contentWidth: CGFloat) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) {
-                primaryButton
-                secondaryButton
-            }
-            .frame(width: contentWidth, alignment: .leading)
-
-            VStack(alignment: .leading, spacing: 8) {
-                primaryButton
-                secondaryButton
-            }
-            .frame(width: contentWidth, alignment: .leading)
+    private var metadataText: String {
+        var parts: [String] = [item.type.displayName]
+        if let year = item.displayYear, !year.isEmpty {
+            parts.append(year)
         }
-        .frame(width: contentWidth, alignment: .leading)
-        .padding(.top, 2)
+        return parts.joined(separator: "  •  ")
     }
 
-    private var primaryButton: some View {
+    // MARK: Actions
+
+    private var actionRow: some View {
+        HStack(spacing: 28) {
+            secondaryAction(
+                systemImage: isSaved ? "checkmark" : "plus",
+                label: "My List"
+            ) {
+                onMyList(item)
+            }
+
+            playButton
+
+            secondaryAction(systemImage: "info.circle", label: "Info") {
+                onMoreInfo(item)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var playButton: some View {
         Button {
-            onPrimaryAction(item)
+            onPlay(item)
         } label: {
             Label("Play", systemImage: "play.fill")
-                .font(.subheadline.weight(.bold))
-                .imageScale(.small)
-                .lineLimit(1)
-                .minimumScaleFactor(0.76)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 13)
-                .padding(.vertical, 8)
-                .frame(minHeight: 34)
-                .background(NightFlixStyle.accentColor, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .font(.headline.weight(.bold))
+                .foregroundStyle(.black)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 11)
+                .background(.white, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(NightflixPressableStyle(pressedScale: 0.95))
         .accessibilityLabel("Play \(item.displayTitle)")
     }
 
-    private var secondaryButton: some View {
-        Button {
-            onMoreInfo(item)
-        } label: {
-            Label("More Info", systemImage: "info.circle")
-                .font(.subheadline.weight(.bold))
-                .imageScale(.small)
-                .lineLimit(1)
-                .minimumScaleFactor(0.76)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 13)
-                .padding(.vertical, 8)
-                .frame(minHeight: 34)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(.white.opacity(0.18), lineWidth: 1)
-                }
+    private func secondaryAction(
+        systemImage: String,
+        label: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 22, weight: .semibold))
+                    .frame(height: 24)
+
+                Text(label)
+                    .font(.caption2.weight(.semibold))
+            }
+            .foregroundStyle(.white)
+            .shadow(color: .black.opacity(0.5), radius: 5, y: 2)
+            .frame(width: 64)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("More info for \(item.displayTitle)")
+        .buttonStyle(NightflixPressableStyle(pressedScale: 0.9))
+        .accessibilityLabel("\(label) for \(item.displayTitle)")
+    }
+
+    private var isSaved: Bool {
+        guard let mediaType = MediaType(tmdbValue: item.mediaType) else { return false }
+        return myListManager.contains(mediaType: mediaType, tmdbId: item.id)
     }
 }
 
@@ -194,11 +158,11 @@ struct HeroBannerPlaceholderView: View {
     }
 }
 
-private struct HeroBackdropImage: View {
+private struct HeroArtworkImage: View {
     let item: MediaItem
 
     var body: some View {
-        if let url = item.backdropURL ?? item.posterURL {
+        if let url = item.posterURL ?? item.backdropURL {
             AsyncImage(url: url) { phase in
                 switch phase {
                 case .empty:

@@ -13,8 +13,9 @@ struct CategoryDetailView: View {
     @State private var entranceVisible = false
 
     private let columns = [
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16)
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10)
     ]
 
     var body: some View {
@@ -91,21 +92,16 @@ struct CategoryDetailView: View {
             messageRow("No titles are available for this category right now.", systemImage: "tray.fill")
                 .nightflixEntrance(isVisible: entranceVisible, delay: 0.12, yOffset: 12, animationsEnabled: pageAnimationsEnabled)
         } else {
-            VStack(alignment: .leading, spacing: 12) {
-                SectionHeaderView(title: "Titles")
-
-                LazyVGrid(columns: columns, spacing: 18) {
-                    ForEach(Array(viewModel.items.enumerated()), id: \.element) { index, item in
-                        CategoryMediaCardView(item: item) {
-                            HapticManager.shared.mediumImpact()
-                            selectedDetailItem = item
-                        }
-                        .nightflixEntrance(isVisible: entranceVisible, delay: cardDelay(index), yOffset: 14, animationsEnabled: pageAnimationsEnabled)
+            LazyVGrid(columns: columns, spacing: 14) {
+                ForEach(Array(viewModel.items.enumerated()), id: \.element) { index, item in
+                    CategoryMediaCardView(item: item) {
+                        HapticManager.shared.mediumImpact()
+                        selectedDetailItem = item
                     }
+                    .nightflixEntrance(isVisible: entranceVisible, delay: cardDelay(index), yOffset: 14, animationsEnabled: pageAnimationsEnabled)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .nightflixEntrance(isVisible: entranceVisible, delay: 0.12, yOffset: 12, scaleAmount: 0.98, animationsEnabled: pageAnimationsEnabled)
         }
     }
 
@@ -174,50 +170,11 @@ private struct CategoryMediaCardView: View {
         Button {
             onSelect()
         } label: {
-            VStack(alignment: .leading, spacing: 9) {
-                ResponsivePosterImage(url: item.posterURL)
-
-                Text(item.displayTitle)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(NightFlixStyle.primaryTextColor)
-                    .lineLimit(2)
-                    .frame(height: 38, alignment: .topLeading)
-
-                HStack(spacing: 6) {
-                    if let year = item.displayYear, !year.isEmpty {
-                        Text(year)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.58))
-                            .lineLimit(1)
-                    }
-
-                    Text(item.type.displayName)
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.78))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 4)
-                        .background(NightFlixStyle.fillColor(darkOpacity: 0.08), in: Capsule())
-                }
-                .frame(height: 22, alignment: .leading)
-
-                Label("Play", systemImage: "play.fill")
-                    .font(.subheadline.weight(.bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 9)
-                    .foregroundStyle(.white)
-                    .background(NightFlixStyle.accentColor, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-            .padding(10)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .contentShape(Rectangle())
-            .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(NightFlixStyle.borderColor(darkOpacity: 0.07), lineWidth: 1)
-            }
+            NightflixPoster(url: item.posterURL)
+                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Play \(item.displayTitle)")
+        .buttonStyle(NightflixPressableStyle())
+        .accessibilityLabel(item.displayTitle)
     }
 }
 

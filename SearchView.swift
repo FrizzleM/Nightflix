@@ -26,7 +26,7 @@ struct SearchView: View {
                 }
             }
             .navigationDestination(item: $selectedItem) { item in
-                PlayerView(item: item)
+                PlayerView(item: item, continueWatchingManager: continueWatchingManager)
             }
             .navigationDestination(item: $selectedSeries) { series in
                 SeriesDetailView(
@@ -203,8 +203,14 @@ struct MediaSearchResultsView: View {
     let onSelectResult: (MediaSearchResult) -> Void
     @State private var lastResultHapticSignature = ""
 
+    private static let columns = [
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10)
+    ]
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             SectionHeaderView(title: title)
                 .nightflixEntrance(isVisible: isEntranceVisible, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: animationsEnabled)
 
@@ -219,19 +225,24 @@ struct MediaSearchResultsView: View {
             }
 
             if viewModel.isLoading && !viewModel.hasResults && viewModel.hasActiveQuery {
-                VStack(spacing: 12) {
-                    ForEach(0..<4, id: \.self) { index in
-                        SearchResultSkeletonView()
+                LazyVGrid(columns: Self.columns, spacing: 14) {
+                    ForEach(0..<9, id: \.self) { index in
+                        PosterSkeletonView(width: nil, height: nil, cornerRadius: NightflixLayout.posterCornerRadius)
+                            .aspectRatio(2.0 / 3.0, contentMode: .fit)
                             .nightflixEntrance(isVisible: isEntranceVisible, delay: cardDelay(index), yOffset: 14, animationsEnabled: animationsEnabled)
                     }
                 }
             } else if viewModel.hasResults {
-                VStack(spacing: 12) {
+                LazyVGrid(columns: Self.columns, spacing: 14) {
                     ForEach(Array(viewModel.results.enumerated()), id: \.element.resultIdentifier) { index, result in
-                        MediaResultCard(
-                            result: result,
-                            onSelectResult: onSelectResult
-                        )
+                        Button {
+                            onSelectResult(result)
+                        } label: {
+                            NightflixPoster(url: result.posterURL)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(NightflixPressableStyle())
+                        .accessibilityLabel(result.displayTitle)
                         .nightflixEntrance(isVisible: isEntranceVisible, delay: cardDelay(index), yOffset: 14, animationsEnabled: animationsEnabled)
                     }
                 }
@@ -265,76 +276,6 @@ struct MediaSearchResultsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .background(NightFlixStyle.subtleFillColor, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-}
-
-struct MediaResultCard: View {
-    let result: MediaSearchResult
-    let onSelectResult: (MediaSearchResult) -> Void
-
-    var body: some View {
-        Button {
-            onSelectResult(result)
-        } label: {
-            HStack(alignment: .top, spacing: 14) {
-                NightFlixPosterImage(url: result.posterURL, width: 86, height: 128)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    titleLine
-
-                    if !result.overview.isEmpty {
-                        Text(result.overview)
-                            .font(.subheadline)
-                            .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.68))
-                            .lineLimit(result.isMovie ? 4 : 3)
-                    }
-
-                    actionLabel
-                        .padding(.top, 4)
-                }
-            }
-            .contentShape(Rectangle())
-            .nightFlixResultCardStyle()
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    private var titleLine: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(result.displayTitle)
-                .font(.headline)
-                .foregroundStyle(NightFlixStyle.primaryTextColor)
-                .lineLimit(2)
-
-            HStack(spacing: 8) {
-                if let year = result.displayYear, !year.isEmpty {
-                    Text(year)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.52))
-                }
-
-                Text(result.type.displayName)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.78))
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(NightFlixStyle.fillColor(darkOpacity: 0.08), in: Capsule())
-            }
-        }
-    }
-
-    private var actionLabel: some View {
-        Label("Play", systemImage: "play.fill")
-            .font(.headline)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 11)
-            .foregroundStyle(.white)
-            .background(NightFlixStyle.accentColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-    }
-
-    private var accessibilityLabel: String {
-        "Play \(result.displayTitle)"
     }
 }
 

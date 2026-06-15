@@ -3,16 +3,28 @@ import SwiftUI
 /// Full-screen embedded player with loading and page-load error states.
 struct PlayerView: View {
     let item: WatchItem
+    var continueWatchingManager: ContinueWatchingManager?
+
+    /// Persist `timeupdate` no more often than every few seconds of playback.
+    private static let persistThreshold: Double = 5
+    /// Treat playback past this fraction as "finished".
+    private static let completionFraction: Double = 0.95
 
     @Environment(\.dismiss) private var dismiss
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var lastPersistedSeconds: Double = -.greatestFiniteMagnitude
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            WebView(url: item.generatedURL, isLoading: $isLoading, errorMessage: $errorMessage)
+            WebView(
+                url: item.generatedURL,
+                isLoading: $isLoading,
+                errorMessage: $errorMessage,
+                onPlayerEvent: handlePlayerEvent
+            )
                 .ignoresSafeArea(edges: .bottom)
 
             closeButton
@@ -86,6 +98,44 @@ struct PlayerView: View {
                 HapticManager.shared.error()
             }
         }
+    }
+
+    private func handlePlayerEvent(_ event: VidkingPlayerEvent) {
+        // Only act on events for the title we launched (ignore unrelated frames).
+        guard let continueWatchingManager, event.id == item.tmdbId else { return }
+
+        // A finished movie leaves the rail; a series is left to advance via its own
+        // next-episode events.
+        if event.event == .ended, item.type == .movie {
+            continueWatchingManager.markFinished(type: item.type, tmdbId: item.tmdbId)
+            return
+        }
+
+        if item.type == .movie, event.fraction >= Self.completionFraction {
+            continueWatchingManager.markFinished(type: item.type, tmdbId: item.tmdbId)
+            return
+        }
+
+        // Throttle the continuous `timeupdate` stream; persist discrete events at once.
+        if event.event == .timeupdate,
+           abs(event.currentTime - lastPersistedSeconds) < Self.persistThreshold {
+            return
+        }
+        lastPersistedSeconds = event.currentTime
+
+        let matchesLaunchedEpisode = event.season == item.season && event.episode == item.episode
+
+        continueWatchingManager.recordProgress(
+            type: item.type,
+            tmdbId: item.tmdbId,
+            title: item.title,
+            posterPath: item.posterPath,
+            season: event.season ?? item.season,
+            episode: event.episode ?? item.episode,
+            episodeName: matchesLaunchedEpisode ? item.episodeName : nil,
+            positionSeconds: event.currentTime,
+            durationSeconds: event.duration
+        )
     }
 
     private var closeButton: some View {

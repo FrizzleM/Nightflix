@@ -6,9 +6,7 @@ enum TMDBConfig {
     static let backdropImageBaseURL = URL(string: "https://image.tmdb.org/t/p/w1280")!
 
     static var credential: String {
-        NightFlixUserConfiguration.normalizedTMDBCredential(
-            from: UserDefaults.standard.string(forKey: AppSettingsStorageKey.tmdbCredential) ?? ""
-        )
+        NightFlixUserConfiguration.effectiveTMDBCredential
     }
 
     static var hasConfiguredCredential: Bool {

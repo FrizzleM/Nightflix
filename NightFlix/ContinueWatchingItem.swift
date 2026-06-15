@@ -12,6 +12,10 @@ struct ContinueWatchingItem: Identifiable, Codable, Equatable, Hashable {
     let posterPath: String?
     let playableURL: URL?
     let lastWatchedDate: Date
+    /// Resume position in seconds (nil before any progress is reported).
+    let progressSeconds: Double?
+    /// Total duration in seconds, when known.
+    let durationSeconds: Double?
 
     init(
         id: UUID = UUID(),
@@ -23,7 +27,9 @@ struct ContinueWatchingItem: Identifiable, Codable, Equatable, Hashable {
         episodeName: String? = nil,
         posterPath: String? = nil,
         playableURL: URL? = nil,
-        lastWatchedDate: Date = Date()
+        lastWatchedDate: Date = Date(),
+        progressSeconds: Double? = nil,
+        durationSeconds: Double? = nil
     ) {
         self.id = id
         self.type = type
@@ -35,6 +41,14 @@ struct ContinueWatchingItem: Identifiable, Codable, Equatable, Hashable {
         self.posterPath = posterPath
         self.playableURL = playableURL
         self.lastWatchedDate = lastWatchedDate
+        self.progressSeconds = progressSeconds
+        self.durationSeconds = durationSeconds
+    }
+
+    /// Fraction watched in `0...1`, or `nil` when there isn't enough info to show a bar.
+    var progressFraction: Double? {
+        guard let progressSeconds, let durationSeconds, durationSeconds > 0 else { return nil }
+        return min(max(progressSeconds / durationSeconds, 0), 1)
     }
 
     var posterURL: URL? {

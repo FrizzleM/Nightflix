@@ -42,12 +42,14 @@ struct FeedView: View {
                             scrollOffsetReader
                                 .id(homeTopAnchorId)
 
-                            LazyVStack(alignment: .leading, spacing: 24) {
+                            LazyVStack(alignment: .leading, spacing: NightflixLayout.sectionSpacing) {
                                 feedSearchBar
                                     .id(homeSearchAnchorId)
+                                    .padding(.horizontal, NightflixLayout.screenPadding)
 
                                 if let playErrorMessage {
                                     messageRow(playErrorMessage, systemImage: "exclamationmark.circle.fill")
+                                        .padding(.horizontal, NightflixLayout.screenPadding)
                                 }
 
                                 if searchViewModel.hasActiveQuery {
@@ -60,17 +62,14 @@ struct FeedView: View {
                                         animationsEnabled: contentAnimationsEnabled,
                                         onSelectResult: showDetail
                                     )
+                                    .padding(.horizontal, NightflixLayout.screenPadding)
                                 } else {
                                     featuredHeroSection(baseDelay: 0.42)
                                     continueWatchingSection(baseDelay: 0.5)
-                                    feedSection(title: "Trending This Week", section: viewModel.trending, baseDelay: 0.54)
-                                    feedSection(title: "Popular Movies", section: viewModel.popularMovies, baseDelay: 0.6)
-                                    feedSection(title: "Popular Series", section: viewModel.popularSeries, baseDelay: 0.66)
-                                    feedSection(title: "Top Rated Movies", section: viewModel.topRatedMovies, baseDelay: 0.72)
-                                    feedSection(title: "Top Rated Series", section: viewModel.topRatedSeries, baseDelay: 0.78)
+                                    top10Section(baseDelay: 0.56)
+                                    interleavedSections(baseDelay: 0.62)
                                 }
                             }
-                            .padding(.horizontal, 20)
                             .padding(.top, HomeStickyHeaderView.scrollContentTopPadding(topSafeArea: geometry.safeAreaInsets.top))
                             .padding(.bottom, 120)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -86,6 +85,7 @@ struct FeedView: View {
                         .refreshable {
                             HapticManager.shared.mediumImpact()
                             await viewModel.refresh()
+                            await viewModel.loadPersonalizedRows(from: historyManager.items, force: true)
                             if feedErrorSignature.isEmpty {
                                 HapticManager.shared.success()
                             } else {
@@ -119,7 +119,7 @@ struct FeedView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(item: $selectedItem) { item in
-                PlayerView(item: item)
+                PlayerView(item: item, continueWatchingManager: continueWatchingManager)
             }
             .navigationDestination(item: $selectedSeries) { series in
                 SeriesDetailView(
@@ -184,6 +184,9 @@ struct FeedView: View {
         .task {
             await viewModel.loadIfNeeded()
         }
+        .task(id: historyManager.items) {
+            await viewModel.loadPersonalizedRows(from: historyManager.items)
+        }
         .tint(NightFlixStyle.accentColor)
         .onChange(of: feedErrorSignature) { _, newValue in
             if !newValue.isEmpty {
@@ -213,63 +216,125 @@ struct FeedView: View {
         if viewModel.isLoadingFeaturedHero && viewModel.featuredHeroItem == nil {
             HeroBannerPlaceholderView()
                 .frame(maxWidth: .infinity)
-                .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 14, scaleAmount: 0.97, animationsEnabled: contentAnimationsEnabled)
+                .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 14, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
         } else if let item = viewModel.featuredHeroItem {
             HeroBannerView(
                 item: item,
-                onPrimaryAction: showHeroDetail,
+                myListManager: myListManager,
+                onPlay: playHeroItem,
+                onMyList: toggleHeroMyList,
                 onMoreInfo: showHeroDetail
             )
             .frame(maxWidth: .infinity)
-            .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 14, scaleAmount: 0.97, animationsEnabled: contentAnimationsEnabled)
+            .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 14, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
         }
     }
 
     @ViewBuilder
     private func continueWatchingSection(baseDelay: Double) -> some View {
         if !continueWatchingManager.items.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                SectionHeaderView(title: "Continue Watching")
-                    .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(alignment: .top, spacing: 14) {
-                        ForEach(Array(continueWatchingManager.items.enumerated()), id: \.element.id) { index, item in
-                            continueWatchingCard(item)
-                                .scrollHapticCard(index: index, coordinateSpaceName: "continue-watching-row")
-                                .nightflixEntrance(isVisible: showContent, delay: cardDelay(index, baseDelay: baseDelay + 0.06), yOffset: 12, animationsEnabled: contentAnimationsEnabled)
-                        }
-                    }
+            rowSection(title: "Continue Watching", baseDelay: baseDelay, coordinateSpaceName: "continue-watching-row") {
+                ForEach(Array(continueWatchingManager.items.enumerated()), id: \.element.id) { index, item in
+                    ContinueWatchingTile(
+                        title: item.title,
+                        subtitle: continueWatchingSubtitle(item),
+                        url: item.posterURL,
+                        progress: item.progressFraction,
+                        action: { playContinueWatching(item) }
+                    )
+                    .scrollHapticCard(index: index, coordinateSpaceName: "continue-watching-row")
+                    .nightflixEntrance(isVisible: showContent, delay: cardDelay(index, baseDelay: baseDelay + 0.06), yOffset: 12, animationsEnabled: contentAnimationsEnabled)
                 }
-                .frame(maxWidth: .infinity)
-                .horizontalScrollHaptics(coordinateSpaceName: "continue-watching-row", isEnabled: showContent)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    private func feedSection(title: String, section: FeedSection, baseDelay: Double) -> some View {
-        let coordinateSpaceName = "feed-row-\(title)"
+    /// Renders the personalized "Because you watched" rows interleaved with the
+    /// standard category rails so the two alternate down the feed.
+    @ViewBuilder
+    private func interleavedSections(baseDelay: Double) -> some View {
+        if viewModel.personalizedRows.isEmpty && viewModel.isLoadingPersonalizedRows {
+            personalizedSkeletonRow(baseDelay: baseDelay)
+        }
 
-        return VStack(alignment: .leading, spacing: 12) {
-            SectionHeaderView(title: title)
-            .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
+        ForEach(Array(interleavedFeedBlocks.enumerated()), id: \.element.id) { index, block in
+            let delay = blockDelay(index, baseDelay: baseDelay)
 
-            if let errorMessage = section.errorMessage {
+            switch block {
+            case .personalized(let row):
+                personalizedRowView(row, baseDelay: delay)
+            case let .category(title, section):
+                feedSection(title: title, section: section, baseDelay: delay)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func personalizedRowView(_ row: PersonalizedRow, baseDelay: Double) -> some View {
+        let coordinateSpaceName = "because-you-watched-\(row.id)"
+
+        rowSection(
+            title: "Because you watched \(row.seedTitle)",
+            baseDelay: baseDelay,
+            coordinateSpaceName: coordinateSpaceName
+        ) {
+            ForEach(Array(row.items.enumerated()), id: \.element) { index, item in
+                PosterCard(
+                    url: item.posterURL,
+                    accessibilityLabel: item.title,
+                    action: { selectedDetailItem = item.mediaItem }
+                )
+                .scrollHapticCard(index: index, coordinateSpaceName: coordinateSpaceName)
+                .nightflixEntrance(isVisible: showContent, delay: cardDelay(index, baseDelay: baseDelay + 0.06), yOffset: 12, animationsEnabled: contentAnimationsEnabled)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func personalizedSkeletonRow(baseDelay: Double) -> some View {
+        VStack(alignment: .leading, spacing: NightflixLayout.sectionHeaderSpacing) {
+            SectionHeaderView(title: "Because you watched…")
+                .padding(.horizontal, NightflixLayout.screenPadding)
+                .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
+
+            loadingRow
+                .nightflixEntrance(isVisible: showContent, delay: baseDelay + 0.05, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func top10Section(baseDelay: Double) -> some View {
+        let section = viewModel.trending
+        let coordinateSpaceName = "top10-row"
+
+        VStack(alignment: .leading, spacing: NightflixLayout.sectionHeaderSpacing) {
+            SectionHeaderView(title: "Top 10 This Week")
+                .padding(.horizontal, NightflixLayout.screenPadding)
+                .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
+
+            if let errorMessage = section.errorMessage, section.items.isEmpty {
                 messageRow(errorMessage, systemImage: "info.circle.fill")
+                    .padding(.horizontal, NightflixLayout.screenPadding)
                     .nightflixEntrance(isVisible: showContent, delay: baseDelay + 0.05, yOffset: 12, animationsEnabled: contentAnimationsEnabled)
             } else if section.isLoading && section.items.isEmpty {
                 loadingRow
                     .nightflixEntrance(isVisible: showContent, delay: baseDelay + 0.05, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(alignment: .top, spacing: 14) {
-                        ForEach(Array(section.items.enumerated()), id: \.element) { index, item in
-                            feedCard(item)
-                                .scrollHapticCard(index: index, coordinateSpaceName: coordinateSpaceName)
-                                .nightflixEntrance(isVisible: showContent, delay: cardDelay(index, baseDelay: baseDelay + 0.06), yOffset: 12, animationsEnabled: contentAnimationsEnabled)
+                    LazyHStack(alignment: .bottom, spacing: 8) {
+                        ForEach(Array(section.items.prefix(10).enumerated()), id: \.element) { index, item in
+                            Top10PosterCard(
+                                rank: index + 1,
+                                url: item.posterURL,
+                                accessibilityLabel: item.title,
+                                action: { selectedDetailItem = item.mediaItem }
+                            )
+                            .scrollHapticCard(index: index, coordinateSpaceName: coordinateSpaceName)
+                            .nightflixEntrance(isVisible: showContent, delay: cardDelay(index, baseDelay: baseDelay + 0.06), yOffset: 12, animationsEnabled: contentAnimationsEnabled)
                         }
                     }
+                    .padding(.horizontal, NightflixLayout.screenPadding)
                 }
                 .frame(maxWidth: .infinity)
                 .horizontalScrollHaptics(coordinateSpaceName: coordinateSpaceName, isEnabled: showContent)
@@ -278,114 +343,90 @@ struct FeedView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var loadingRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(spacing: 14) {
-                ForEach(0..<6, id: \.self) { _ in
-                    CardSkeletonView()
+    @ViewBuilder
+    private func feedSection(title: String, section: FeedSection, baseDelay: Double) -> some View {
+        let coordinateSpaceName = "feed-row-\(title)"
+
+        VStack(alignment: .leading, spacing: NightflixLayout.sectionHeaderSpacing) {
+            SectionHeaderView(title: title)
+                .padding(.horizontal, NightflixLayout.screenPadding)
+                .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
+
+            if let errorMessage = section.errorMessage {
+                messageRow(errorMessage, systemImage: "info.circle.fill")
+                    .padding(.horizontal, NightflixLayout.screenPadding)
+                    .nightflixEntrance(isVisible: showContent, delay: baseDelay + 0.05, yOffset: 12, animationsEnabled: contentAnimationsEnabled)
+            } else if section.isLoading && section.items.isEmpty {
+                loadingRow
+                    .nightflixEntrance(isVisible: showContent, delay: baseDelay + 0.05, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(alignment: .top, spacing: NightflixLayout.rowItemSpacing) {
+                        ForEach(Array(section.items.enumerated()), id: \.element) { index, item in
+                            PosterCard(
+                                url: item.posterURL,
+                                accessibilityLabel: item.title,
+                                action: { selectedDetailItem = item.mediaItem }
+                            )
+                            .scrollHapticCard(index: index, coordinateSpaceName: coordinateSpaceName)
+                            .nightflixEntrance(isVisible: showContent, delay: cardDelay(index, baseDelay: baseDelay + 0.06), yOffset: 12, animationsEnabled: contentAnimationsEnabled)
+                        }
+                    }
+                    .padding(.horizontal, NightflixLayout.screenPadding)
                 }
+                .frame(maxWidth: .infinity)
+                .horizontalScrollHaptics(coordinateSpaceName: coordinateSpaceName, isEnabled: showContent)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func continueWatchingCard(_ item: ContinueWatchingItem) -> some View {
-        Button {
-            HapticManager.shared.mediumImpact()
-            playContinueWatching(item)
-        } label: {
-            VStack(alignment: .leading, spacing: 9) {
-                NightFlixPosterImage(url: item.posterURL, width: 132, height: 198)
+    /// Shared chrome for a horizontally-scrolling, edge-to-edge poster row.
+    @ViewBuilder
+    private func rowSection<Content: View>(
+        title: String,
+        baseDelay: Double,
+        coordinateSpaceName: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: NightflixLayout.sectionHeaderSpacing) {
+            SectionHeaderView(title: title)
+                .padding(.horizontal, NightflixLayout.screenPadding)
+                .nightflixEntrance(isVisible: showContent, delay: baseDelay, yOffset: 12, scaleAmount: 0.98, animationsEnabled: contentAnimationsEnabled)
 
-                Text(item.title)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(NightFlixStyle.primaryTextColor)
-                    .lineLimit(2)
-                    .frame(height: 38, alignment: .topLeading)
-
-                Text(item.type.displayName)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.78))
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(NightFlixStyle.fillColor(darkOpacity: 0.08), in: Capsule())
-                    .frame(height: 22, alignment: .leading)
-
-                Label("Continue", systemImage: "play.fill")
-                    .font(.subheadline.weight(.bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 9)
-                    .foregroundStyle(.white)
-                    .background(NightFlixStyle.accentColor, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-            .padding(10)
-            .frame(width: 152, alignment: .top)
-            .contentShape(Rectangle())
-            .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(NightFlixStyle.borderColor(darkOpacity: 0.07), lineWidth: 1)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Continue \(item.title)")
-    }
-
-    private func feedCard(_ item: FeedItem) -> some View {
-        Button {
-            HapticManager.shared.mediumImpact()
-            selectedDetailItem = item.mediaItem
-        } label: {
-            VStack(alignment: .leading, spacing: 9) {
-                NightFlixPosterImage(url: item.posterURL, width: 132, height: 198)
-
-                Text(item.title)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(NightFlixStyle.primaryTextColor)
-                    .lineLimit(2)
-                    .frame(height: 38, alignment: .topLeading)
-
-                HStack(spacing: 6) {
-                    Text(item.year ?? "Year N/A")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.58))
-                        .lineLimit(1)
-
-                    Text(item.type.displayName)
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.78))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 4)
-                        .background(NightFlixStyle.fillColor(darkOpacity: 0.08), in: Capsule())
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: NightflixLayout.rowItemSpacing) {
+                    content()
                 }
-                .frame(height: 22, alignment: .leading)
-
-                feedCardActionLabel(for: item)
+                .padding(.horizontal, NightflixLayout.screenPadding)
             }
-            .padding(10)
-            .frame(width: 152, alignment: .top)
-            .contentShape(Rectangle())
-            .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(NightFlixStyle.borderColor(darkOpacity: 0.07), lineWidth: 1)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(feedCardAccessibilityLabel(for: item))
-    }
-
-    private func feedCardActionLabel(for item: FeedItem) -> some View {
-        Label("Play", systemImage: "play.fill")
-            .font(.subheadline.weight(.bold))
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 9)
-            .foregroundStyle(.white)
-            .background(NightFlixStyle.accentColor, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .horizontalScrollHaptics(coordinateSpaceName: coordinateSpaceName, isEnabled: showContent)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func feedCardAccessibilityLabel(for item: FeedItem) -> String {
-        "Play \(item.title)"
+    private var loadingRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyHStack(spacing: NightflixLayout.rowItemSpacing) {
+                ForEach(0..<6, id: \.self) { _ in
+                    PosterSkeletonView(
+                        width: NightflixLayout.posterWidth,
+                        height: NightflixLayout.posterHeight,
+                        cornerRadius: NightflixLayout.posterCornerRadius
+                    )
+                }
+            }
+            .padding(.horizontal, NightflixLayout.screenPadding)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func continueWatchingSubtitle(_ item: ContinueWatchingItem) -> String? {
+        if item.type == .tv, let season = item.season, let episode = item.episode {
+            return "S\(season):E\(episode)"
+        }
+        return item.type.displayName
     }
 
     private func messageRow(_ message: String, systemImage: String) -> some View {
@@ -551,9 +592,115 @@ struct FeedView: View {
         baseDelay + min(Double(index) * 0.055, 0.44)
     }
 
+    private func blockDelay(_ index: Int, baseDelay: Double) -> Double {
+        baseDelay + min(Double(index) * 0.05, 0.3)
+    }
+
+    /// One row in the interleaved middle of the feed: either a personalized rail or a
+    /// standard category rail.
+    private enum FeedBlock: Identifiable {
+        case personalized(PersonalizedRow)
+        case category(title: String, section: FeedSection)
+
+        var id: String {
+            switch self {
+            case .personalized(let row):
+                return "personalized-\(row.id)"
+            case .category(let title, _):
+                return "category-\(title)"
+            }
+        }
+    }
+
+    /// Alternates the available "Because you watched" rows with the standard category
+    /// rails (personalized first), then appends whatever is left over once one side
+    /// runs out — so the two are mixed instead of clustered.
+    private var interleavedFeedBlocks: [FeedBlock] {
+        let personalized = viewModel.personalizedRows.map(FeedBlock.personalized)
+        let categories: [FeedBlock] = [
+            .category(title: "Popular Movies", section: viewModel.popularMovies),
+            .category(title: "Popular Series", section: viewModel.popularSeries),
+            .category(title: "Top Rated Movies", section: viewModel.topRatedMovies),
+            .category(title: "Top Rated Series", section: viewModel.topRatedSeries)
+        ]
+
+        var blocks: [FeedBlock] = []
+        var personalizedIndex = 0
+        var categoryIndex = 0
+        var takePersonalized = true
+
+        while personalizedIndex < personalized.count || categoryIndex < categories.count {
+            if takePersonalized, personalizedIndex < personalized.count {
+                blocks.append(personalized[personalizedIndex])
+                personalizedIndex += 1
+            } else if categoryIndex < categories.count {
+                blocks.append(categories[categoryIndex])
+                categoryIndex += 1
+            } else {
+                blocks.append(personalized[personalizedIndex])
+                personalizedIndex += 1
+            }
+
+            takePersonalized.toggle()
+        }
+
+        return blocks
+    }
+
     private func showHeroDetail(_ item: MediaItem) {
         HapticManager.shared.lightImpact()
         selectedDetailItem = item
+    }
+
+    private func toggleHeroMyList(_ item: MediaItem) {
+        guard let listItem = MyListItem(mediaItem: item) else { return }
+        HapticManager.shared.lightImpact()
+        myListManager.toggle(listItem)
+    }
+
+    private func playHeroItem(_ item: MediaItem) {
+        playErrorMessage = nil
+
+        switch item.type {
+        case .movie:
+            guard let url = StreamingProviderURLBuilder.movieURL(
+                tmdbId: item.id,
+                progressSeconds: continueWatchingManager.resumeSeconds(
+                    type: .movie,
+                    tmdbId: String(item.id),
+                    season: nil,
+                    episode: nil
+                )
+            ) else {
+                playErrorMessage = StreamingProviderURLBuilder.configurationErrorMessage
+                HapticManager.shared.error()
+                return
+            }
+
+            HapticManager.shared.mediumImpact()
+            let watchItem = WatchItem(
+                type: .movie,
+                title: item.displayTitle,
+                tmdbId: String(item.id),
+                posterPath: item.posterPath,
+                generatedURL: url
+            )
+            historyManager.add(watchItem)
+            continueWatchingManager.addOrUpdate(
+                item: ContinueWatchingItem(
+                    type: .movie,
+                    title: item.displayTitle,
+                    tmdbId: String(item.id),
+                    posterPath: item.posterPath,
+                    playableURL: url
+                )
+            )
+            selectedItem = watchItem
+
+        case .tv:
+            HapticManager.shared.lightImpact()
+            selectedDetailItem = item
+        }
     }
 
     private func playContinueWatching(_ item: ContinueWatchingItem) {
@@ -562,7 +709,15 @@ struct FeedView: View {
         switch item.type {
         case .movie:
             guard let tmdbId = item.tmdbIntId,
-                  let url = StreamingProviderURLBuilder.movieURL(tmdbId: tmdbId) else {
+                  let url = StreamingProviderURLBuilder.movieURL(
+                    tmdbId: tmdbId,
+                    progressSeconds: continueWatchingManager.resumeSeconds(
+                        type: .movie,
+                        tmdbId: item.tmdbId,
+                        season: nil,
+                        episode: nil
+                    )
+                  ) else {
                 playErrorMessage = StreamingProviderURLBuilder.configurationErrorMessage
                 HapticManager.shared.error()
                 return
@@ -589,7 +744,13 @@ struct FeedView: View {
                 guard let url = StreamingProviderURLBuilder.tvURL(
                     tmdbId: tmdbId,
                     season: season,
-                    episode: episode
+                    episode: episode,
+                    progressSeconds: continueWatchingManager.resumeSeconds(
+                        type: .tv,
+                        tmdbId: item.tmdbId,
+                        season: season,
+                        episode: episode
+                    )
                 ) else {
                     playErrorMessage = StreamingProviderURLBuilder.configurationErrorMessage
                     HapticManager.shared.error()

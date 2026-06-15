@@ -11,8 +11,9 @@ struct MyListView: View {
     @State private var entranceVisible = false
 
     private let columns = [
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16)
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10)
     ]
 
     var body: some View {
@@ -31,7 +32,7 @@ struct MyListView: View {
                             .accessibilityAddTraits(.isHeader)
                             .nightflixEntrance(isVisible: entranceVisible, delay: 0.06, yOffset: 12, scaleAmount: 0.98, animationsEnabled: pageAnimationsEnabled)
 
-                        LazyVGrid(columns: columns, spacing: 18) {
+                        LazyVGrid(columns: columns, spacing: 14) {
                             ForEach(Array(myListManager.items.enumerated()), id: \.element.id) { index, item in
                                 MyListCardView(
                                     item: item,

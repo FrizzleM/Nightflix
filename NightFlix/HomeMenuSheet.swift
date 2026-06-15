@@ -9,8 +9,8 @@ enum HomeMenuDestination: String, Identifiable {
 }
 
 struct HomeMenuSheet: View {
-    private let itemCount = 6
-    private let itemStaggerDelay = 0.055
+    private let itemCount = 7
+    private let itemStaggerDelay = 0.05
     private let itemAnimationCompletionPadding = 0.18
     private let backdropAnimationDuration = 0.24
 
@@ -33,7 +33,7 @@ struct HomeMenuSheet: View {
         GeometryReader { proxy in
             let safeTop = proxy.safeAreaInsets.top > 0 ? proxy.safeAreaInsets.top : 44
             let safeBottom = proxy.safeAreaInsets.bottom > 0 ? proxy.safeAreaInsets.bottom : 24
-            let maxButtonWidth = min(proxy.size.width - 40, 360)
+            let menuWidth = min(proxy.size.width - 32, 460)
 
             ZStack {
                 if shouldRender {
@@ -47,10 +47,10 @@ struct HomeMenuSheet: View {
                         }
                         .transition(overlayTransition)
 
-                    HomeMenuButtonCluster(
+                    HomeMenuContent(
                         safeTop: safeTop,
                         safeBottom: safeBottom,
-                        maxButtonWidth: maxButtonWidth,
+                        menuWidth: menuWidth,
                         isPresented: areItemsPresented,
                         animationsEnabled: animationsEnabled,
                         onClose: onDismiss,
@@ -86,7 +86,7 @@ struct HomeMenuSheet: View {
     }
 
     private var overlayColor: Color {
-        colorScheme == .dark ? Color.black.opacity(0.80) : Color.black.opacity(0.44)
+        colorScheme == .dark ? Color.black.opacity(0.86) : Color.black.opacity(0.42)
     }
 
     private var itemAnimationDuration: Double {
@@ -158,15 +158,14 @@ struct HomeMenuSheet: View {
             shouldRender = false
         }
     }
-
 }
 
-private struct HomeMenuButtonCluster: View {
-    private let itemCount = 6
+private struct HomeMenuContent: View {
+    private let itemCount = 7
 
     let safeTop: CGFloat
     let safeBottom: CGFloat
-    let maxButtonWidth: CGFloat
+    let menuWidth: CGFloat
     let isPresented: Bool
     let animationsEnabled: Bool
     let onClose: () -> Void
@@ -181,25 +180,35 @@ private struct HomeMenuButtonCluster: View {
     @State private var itemAnimationCycle = 0
 
     var body: some View {
-        VStack(spacing: 14) {
-            closeButton
-                .frame(maxWidth: maxButtonWidth, alignment: .trailing)
-                .menuItemEntrance(isVisible: isItemVisible(0), index: 0)
+        VStack(alignment: .leading, spacing: 0) {
+            header
+                .menuItemEntrance(isVisible: isItemVisible(0))
+                .padding(.bottom, 22)
 
-            menuButton(title: "Watch Later", systemImage: "clock.fill", action: onMyList)
-                .menuItemEntrance(isVisible: isItemVisible(1), index: 1)
-            menuButton(title: "Categories", systemImage: "square.grid.2x2.fill", action: onCategories)
-                .menuItemEntrance(isVisible: isItemVisible(2), index: 2)
-            menuButton(title: "Donate", systemImage: "cup.and.saucer.fill", trailingSystemImage: "arrow.up.right", action: onDonate)
-                .menuItemEntrance(isVisible: isItemVisible(3), index: 3)
-            menuButton(title: "Join my Discord", systemImage: "bubble.left.and.bubble.right.fill", trailingSystemImage: "arrow.up.right", action: onDiscord)
-                .menuItemEntrance(isVisible: isItemVisible(4), index: 4)
-            menuButton(title: "Settings", systemImage: "gearshape.fill", isProminent: true, action: onSettings)
-                .menuItemEntrance(isVisible: isItemVisible(5), index: 5)
+            Group {
+                menuRow(index: 1, title: "Watch Later", systemImage: "clock", action: onMyList)
+                rowDivider(index: 1)
+                menuRow(index: 2, title: "Categories", systemImage: "square.grid.2x2", action: onCategories)
+                rowDivider(index: 2)
+                menuRow(index: 3, title: "Settings", systemImage: "gearshape", action: onSettings)
+            }
+
+            sectionLabel("Support")
+                .menuItemEntrance(isVisible: isItemVisible(4))
+                .padding(.top, 26)
+                .padding(.bottom, 2)
+
+            Group {
+                menuRow(index: 5, title: "Donate", systemImage: "cup.and.saucer", isExternal: true, action: onDonate)
+                rowDivider(index: 5)
+                menuRow(index: 6, title: "Join my Discord", systemImage: "bubble.left.and.bubble.right", isExternal: true, action: onDiscord)
+            }
+
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: maxButtonWidth)
-        .padding(.top, safeTop + 24)
-        .padding(.horizontal, 20)
+        .frame(maxWidth: menuWidth, alignment: .leading)
+        .padding(.top, safeTop + 14)
+        .padding(.horizontal, 24)
         .padding(.bottom, safeBottom + 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         .onAppear {
@@ -210,156 +219,97 @@ private struct HomeMenuButtonCluster: View {
         }
     }
 
+    private var header: some View {
+        HStack(alignment: .center) {
+            Text("Nightflix")
+                .font(.system(size: 27, weight: .bold, design: .rounded))
+                .foregroundStyle(NightFlixStyle.accentColor)
+                .shadow(color: NightFlixStyle.titleGlowColor.opacity(0.9), radius: 14)
+                .lineLimit(1)
+
+            Spacer(minLength: 12)
+
+            closeButton
+        }
+    }
+
     private var closeButton: some View {
         Button {
             onClose()
         } label: {
             Image(systemName: "xmark")
-                .font(.headline.weight(.black))
-                .foregroundStyle(closeButtonForegroundColor)
-                .frame(width: 48, height: 48)
-                .background(closeButtonBackgroundColor, in: Circle())
-                .overlay {
-                    Circle()
-                        .stroke(closeButtonStrokeColor, lineWidth: 1)
-                }
-                .shadow(color: closeButtonShadowColor, radius: 18, y: 8)
+                .font(.subheadline.weight(.black))
+                .foregroundStyle(primaryText)
+                .frame(width: 40, height: 40)
+                .background(closeButtonBackground, in: Circle())
+                .overlay { Circle().strokeBorder(separatorColor, lineWidth: 1) }
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Close menu")
     }
 
-    private func menuButton(
+    private func sectionLabel(_ title: String) -> some View {
+        Text(title.uppercased())
+            .font(.caption.weight(.bold))
+            .tracking(1.1)
+            .foregroundStyle(NightFlixStyle.tertiaryTextColor)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func menuRow(
+        index: Int,
         title: String,
         systemImage: String,
-        trailingSystemImage: String = "chevron.right",
-        isProminent: Bool = false,
+        isExternal: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
-        Button {
-            action()
-        } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(iconBackgroundColor(isProminent: isProminent))
-                        .frame(width: 44, height: 44)
-
-                    Image(systemName: systemImage)
-                        .font(.headline.weight(.black))
-                        .foregroundStyle(iconForegroundColor(isProminent: isProminent))
-                }
+        Button(action: action) {
+            HStack(spacing: 16) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(primaryText)
+                    .frame(width: 26, alignment: .center)
 
                 Text(title)
-                    .font(.title3.weight(.black))
-                    .foregroundStyle(buttonTextColor(isProminent: isProminent))
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(primaryText)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.76)
+                    .minimumScaleFactor(0.8)
 
-                Spacer(minLength: 0)
+                Spacer(minLength: 8)
 
-                Image(systemName: trailingSystemImage)
-                    .font(.footnote.weight(.black))
-                    .foregroundStyle(buttonTextColor(isProminent: isProminent).opacity(0.72))
+                Image(systemName: isExternal ? "arrow.up.right" : "chevron.right")
+                    .font(.footnote.weight(.bold))
+                    .foregroundStyle(NightFlixStyle.tertiaryTextColor)
             }
-            .padding(.horizontal, 18)
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 72)
-            .background(buttonBackground(isProminent: isProminent))
-            .overlay { buttonStroke(isProminent: isProminent) }
-            .shadow(color: buttonShadowColor, radius: 22, y: 10)
+            .padding(.vertical, 17)
+            .padding(.horizontal, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MenuRowButtonStyle())
         .accessibilityLabel(title)
+        .menuItemEntrance(isVisible: isItemVisible(index))
     }
 
-    private func buttonBackground(isProminent: Bool) -> some View {
-        RoundedRectangle(cornerRadius: 22, style: .continuous)
-            .fill(buttonBackgroundColor)
-            .overlay(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                buttonHighlightColor(isProminent: isProminent),
-                                buttonAccentWashColor(isProminent: isProminent),
-                                .clear
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .allowsHitTesting(false)
-            }
+    private func rowDivider(index: Int) -> some View {
+        Rectangle()
+            .fill(separatorColor)
+            .frame(height: 1)
+            .padding(.leading, 48)
+            .menuItemEntrance(isVisible: isItemVisible(index))
     }
 
-    private func buttonStroke(isProminent: Bool) -> some View {
-        RoundedRectangle(cornerRadius: 22, style: .continuous)
-            .stroke(
-                buttonStrokeColor(isProminent: isProminent),
-                lineWidth: isProminent ? 1.5 : 1
-            )
-    }
-
-    private func iconBackgroundColor(isProminent: Bool) -> Color {
-        if colorScheme == .dark {
-            return isProminent ? NightFlixStyle.accentColor.opacity(0.28) : NightFlixStyle.accentColor.opacity(0.18)
-        }
-
-        return isProminent ? NightFlixStyle.accentColor.opacity(0.18) : NightFlixStyle.accentColor.opacity(0.12)
-    }
-
-    private func iconForegroundColor(isProminent: Bool) -> Color {
-        NightFlixStyle.accentColor
-    }
-
-    private func buttonTextColor(isProminent: Bool) -> Color {
+    private var primaryText: Color {
         colorScheme == .dark ? .white : .black
     }
 
-    private var closeButtonForegroundColor: Color {
-        colorScheme == .dark ? .white : .black
+    private var separatorColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.1)
     }
 
-    private var closeButtonBackgroundColor: Color {
-        colorScheme == .dark ? .black : .white
-    }
-
-    private var closeButtonStrokeColor: Color {
-        colorScheme == .dark ? Color.white.opacity(0.18) : Color.black.opacity(0.12)
-    }
-
-    private var closeButtonShadowColor: Color {
-        colorScheme == .dark ? Color.black.opacity(0.58) : Color.black.opacity(0.16)
-    }
-
-    private var buttonBackgroundColor: Color {
-        colorScheme == .dark ? .black : .white
-    }
-
-    private var buttonShadowColor: Color {
-        colorScheme == .dark ? Color.black.opacity(0.62) : Color.black.opacity(0.12)
-    }
-
-    private func buttonStrokeColor(isProminent: Bool) -> Color {
-        if isProminent {
-            return NightFlixStyle.accentColor.opacity(colorScheme == .dark ? 0.72 : 0.78)
-        }
-
-        return colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.10)
-    }
-
-    private func buttonHighlightColor(isProminent: Bool) -> Color {
-        colorScheme == .dark ? Color.white.opacity(isProminent ? 0.12 : 0.08) : Color.white.opacity(0.92)
-    }
-
-    private func buttonAccentWashColor(isProminent: Bool) -> Color {
-        if colorScheme == .dark {
-            return NightFlixStyle.accentColor.opacity(isProminent ? 0.16 : 0.05)
-        }
-
-        return NightFlixStyle.accentColor.opacity(isProminent ? 0.08 : 0.03)
+    private var closeButtonBackground: Color {
+        colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.06)
     }
 
     private func updateItemVisibility(isPresented: Bool) {
@@ -381,10 +331,10 @@ private struct HomeMenuButtonCluster: View {
         }
 
         for index in 0..<itemCount {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.055) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(index) * 0.05) {
                 guard itemAnimationCycle == cycle else { return }
 
-                withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.82)) {
+                withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.84)) {
                     _ = visibleItems.insert(index)
                 }
             }
@@ -398,12 +348,12 @@ private struct HomeMenuButtonCluster: View {
         }
 
         for index in (0..<itemCount).reversed() {
-            let delay = Double(itemCount - 1 - index) * 0.055
+            let delay = Double(itemCount - 1 - index) * 0.05
 
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 guard itemAnimationCycle == cycle else { return }
 
-                withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.82)) {
+                withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.84)) {
                     _ = visibleItems.remove(index)
                 }
             }
@@ -415,20 +365,35 @@ private struct HomeMenuButtonCluster: View {
     }
 }
 
+private struct MenuRowButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var colorScheme
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(highlightColor.opacity(configuration.isPressed ? 1 : 0))
+            )
+            .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
+    }
+
+    private var highlightColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.05)
+    }
+}
+
 private struct MenuItemEntranceModifier: ViewModifier {
     let isVisible: Bool
-    let index: Int
 
     func body(content: Content) -> some View {
         content
             .opacity(isVisible ? 1 : 0)
-            .offset(x: isVisible ? 0 : 96)
-            .scaleEffect(isVisible ? 1 : 0.98, anchor: .trailing)
+            .offset(y: isVisible ? 0 : 14)
     }
 }
 
 private extension View {
-    func menuItemEntrance(isVisible: Bool, index: Int) -> some View {
-        modifier(MenuItemEntranceModifier(isVisible: isVisible, index: index))
+    func menuItemEntrance(isVisible: Bool) -> some View {
+        modifier(MenuItemEntranceModifier(isVisible: isVisible))
     }
 }

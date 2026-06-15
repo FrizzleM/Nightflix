@@ -27,6 +27,67 @@ final class ContinueWatchingManager {
         save()
     }
 
+    /// Merges a fresh playback position into the matching entry (by type + tmdbId),
+    /// preserving artwork/title and advancing the tracked season/episode. Creates the
+    /// entry if it doesn't exist yet.
+    func recordProgress(
+        type: WatchType,
+        tmdbId: String,
+        title: String,
+        posterPath: String?,
+        season: Int?,
+        episode: Int?,
+        episodeName: String?,
+        positionSeconds: Double,
+        durationSeconds: Double
+    ) {
+        let existing = items.first { $0.type == type && $0.tmdbId == tmdbId }
+        let isSameEpisode = existing?.season == season && existing?.episode == episode
+        let resolvedEpisodeName = isSameEpisode ? (episodeName ?? existing?.episodeName) : episodeName
+        let resolvedPoster = posterPath ?? existing?.posterPath
+        let resolvedDuration = durationSeconds > 0 ? durationSeconds : existing?.durationSeconds
+
+        addOrUpdate(
+            item: ContinueWatchingItem(
+                type: type,
+                title: title,
+                tmdbId: tmdbId,
+                season: season,
+                episode: episode,
+                episodeName: resolvedEpisodeName,
+                posterPath: resolvedPoster,
+                playableURL: existing?.playableURL,
+                progressSeconds: positionSeconds,
+                durationSeconds: resolvedDuration
+            )
+        )
+    }
+
+    /// Removes a title from the rail once it has been watched to completion.
+    func markFinished(type: WatchType, tmdbId: String) {
+        let originalCount = items.count
+        items.removeAll { $0.type == type && $0.tmdbId == tmdbId }
+        guard items.count != originalCount else { return }
+        save()
+    }
+
+    /// The saved resume position (seconds) for an exact movie/episode, or `nil` when
+    /// there isn't a meaningful position to resume from.
+    func resumeSeconds(type: WatchType, tmdbId: String, season: Int?, episode: Int?) -> Int? {
+        guard let item = items.first(where: { $0.type == type && $0.tmdbId == tmdbId }) else {
+            return nil
+        }
+
+        if type == .tv {
+            guard item.season == season, item.episode == episode else { return nil }
+        }
+
+        guard let position = item.progressSeconds, position >= 5 else { return nil }
+        if let fraction = item.progressFraction, fraction >= 0.95 { return nil }
+
+        return Int(position)
+    }
+
     func clear() {
         items = []
         userDefaults.removeObject(forKey: storageKey)

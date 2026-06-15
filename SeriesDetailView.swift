@@ -30,7 +30,7 @@ struct SeriesDetailView: View {
         .navigationTitle(seriesTitle)
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $selectedItem) { item in
-            PlayerView(item: item)
+            PlayerView(item: item, continueWatchingManager: continueWatchingManager)
         }
         .onAppear {
             startEntrance()
@@ -156,9 +156,12 @@ struct SeriesDetailView: View {
                 messageRow("No episodes are available for this season.", systemImage: "tray.fill")
                     .nightflixEntrance(isVisible: entranceVisible, delay: 0.5, yOffset: 12)
             } else {
-                VStack(spacing: 12) {
+                VStack(spacing: 0) {
                     ForEach(Array(viewModel.episodes.enumerated()), id: \.element.id) { index, episode in
-                        episodeCard(episode)
+                        if index > 0 {
+                            Divider().overlay(NightFlixStyle.borderColor)
+                        }
+                        episodeRow(episode)
                             .nightflixEntrance(isVisible: entranceVisible, delay: cardDelay(index, baseDelay: 0.5), yOffset: 12)
                     }
                 }
@@ -218,70 +221,58 @@ struct SeriesDetailView: View {
         .buttonStyle(.plain)
     }
 
-    private func episodeCard(_ episode: Episode) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 14) {
-                    episodeImage(episode)
-                    episodeInfo(episode)
+    private func episodeRow(_ episode: Episode) -> some View {
+        Button {
+            HapticManager.shared.mediumImpact()
+            play(episode)
+        } label: {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center, spacing: 13) {
+                    ZStack {
+                        NightflixPoster(url: episode.stillURL, width: 132, height: 76, cornerRadius: 6)
+
+                        Circle()
+                            .fill(.black.opacity(0.4))
+                            .frame(width: 34, height: 34)
+                            .overlay {
+                                Image(systemName: "play.fill")
+                                    .font(.system(size: 13, weight: .black))
+                                    .foregroundStyle(.white)
+                            }
+                            .overlay { Circle().strokeBorder(.white.opacity(0.7), lineWidth: 1.5) }
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(episode.episodeNumber). \(episode.name)")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(NightFlixStyle.primaryTextColor)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if let airDate = episode.airDate, !airDate.isEmpty {
+                            Text(airDate)
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(NightFlixStyle.secondaryTextColor)
+                        }
+                    }
+
+                    Spacer(minLength: 0)
                 }
 
-                VStack(alignment: .leading, spacing: 14) {
-                    episodeImage(episode)
-                    episodeInfo(episode)
+                if !episode.overview.isEmpty {
+                    Text(episode.overview)
+                        .font(.footnote)
+                        .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.62))
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-
-            Button {
-                HapticManager.shared.mediumImpact()
-                play(episode)
-            } label: {
-                Label("Play", systemImage: "play.fill")
-                    .font(.subheadline.weight(.bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .foregroundStyle(.white)
-                    .background(NightFlixStyle.accentColor, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-            .buttonStyle(.plain)
+            .padding(.vertical, 13)
+            .contentShape(Rectangle())
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .nightFlixResultCardStyle()
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func episodeImage(_ episode: Episode) -> some View {
-        NightFlixPosterImage(url: episode.stillURL, width: 124, height: 70)
-    }
-
-    private func episodeInfo(_ episode: Episode) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Episode \(episode.episodeNumber)")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(NightFlixStyle.accentColor)
-
-            Text(episode.name)
-                .font(.headline)
-                .foregroundStyle(NightFlixStyle.primaryTextColor)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let airDate = episode.airDate, !airDate.isEmpty {
-                Text(airDate)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.52))
-            }
-
-            if !episode.overview.isEmpty {
-                Text(episode.overview)
-                    .font(.subheadline)
-                    .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.68))
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .buttonStyle(.plain)
+        .accessibilityLabel("Play episode \(episode.episodeNumber), \(episode.name)")
     }
 
     private func messageRow(_ message: String, systemImage: String) -> some View {
@@ -299,7 +290,13 @@ struct SeriesDetailView: View {
         guard let url = StreamingProviderURLBuilder.tvURL(
             tmdbId: seriesId,
             season: episode.seasonNumber,
-            episode: episode.episodeNumber
+            episode: episode.episodeNumber,
+            progressSeconds: continueWatchingManager.resumeSeconds(
+                type: .tv,
+                tmdbId: String(seriesId),
+                season: episode.seasonNumber,
+                episode: episode.episodeNumber
+            )
         ) else {
             playErrorMessage = StreamingProviderURLBuilder.configurationErrorMessage
             HapticManager.shared.error()

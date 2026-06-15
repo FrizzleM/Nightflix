@@ -114,59 +114,43 @@ struct HeroBannerSkeletonView: View {
     var body: some View {
         Color.clear
             .frame(maxWidth: .infinity)
-            .aspectRatio(16.0 / 10.5, contentMode: .fit)
-            .frame(minHeight: 280, maxHeight: 360)
+            .aspectRatio(0.76, contentMode: .fit)
             .overlay {
                 GeometryReader { proxy in
                     let bannerWidth = proxy.size.width
                     let bannerHeight = proxy.size.height
-                    let horizontalPadding: CGFloat = bannerWidth < 360 ? 16 : 20
-                    let contentWidth = min(max(0, bannerWidth - horizontalPadding * 2), bannerWidth * 0.74)
 
-                    ZStack(alignment: .bottomLeading) {
-                        SkeletonView(cornerRadius: 22)
-                            .overlay(alignment: .bottomLeading) {
+                    ZStack(alignment: .bottom) {
+                        SkeletonView(cornerRadius: 0)
+                            .overlay(alignment: .bottom) {
                                 LinearGradient(
                                     colors: [
-                                        .black.opacity(0.58),
-                                        .black.opacity(0.22),
-                                        .clear
+                                        .clear,
+                                        NightFlixStyle.backgroundColor.opacity(0.85),
+                                        NightFlixStyle.backgroundColor
                                     ],
-                                    startPoint: .bottomLeading,
-                                    endPoint: .topTrailing
+                                    startPoint: .center,
+                                    endPoint: .bottom
                                 )
                             }
 
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack(spacing: 7) {
-                                TextLineSkeletonView(width: 82, height: 18)
-                                TextLineSkeletonView(width: 64, height: 18)
-                            }
-
-                            TextLineSkeletonView(width: min(230, contentWidth), height: 32)
-                            TextLineSkeletonView(width: contentWidth, height: 13)
-                            TextLineSkeletonView(width: min(250, contentWidth * 0.82), height: 13)
-
+                        VStack(spacing: 14) {
                             HStack(spacing: 8) {
-                                SkeletonView(cornerRadius: 10)
-                                    .frame(width: 132, height: 34)
-                                SkeletonView(cornerRadius: 10)
-                                    .frame(width: 112, height: 34)
+                                TextLineSkeletonView(width: 74, height: 18)
+                                TextLineSkeletonView(width: 120, height: 14)
                             }
-                            .padding(.top, 2)
+
+                            HStack(spacing: 28) {
+                                SkeletonView(cornerRadius: 8).frame(width: 48, height: 44)
+                                SkeletonView(cornerRadius: 8).frame(width: 120, height: 44)
+                                SkeletonView(cornerRadius: 8).frame(width: 48, height: 44)
+                            }
                         }
-                        .padding(.horizontal, horizontalPadding)
-                        .padding(.bottom, 16)
+                        .padding(.bottom, 22)
                     }
                     .frame(width: bannerWidth, height: bannerHeight)
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(.white.opacity(0.08), lineWidth: 1)
-            }
-            .shadow(color: .black.opacity(0.18), radius: 18, y: 10)
     }
 }
 
@@ -195,78 +179,53 @@ struct SearchResultSkeletonView: View {
 struct DetailPageSkeletonView: View {
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(alignment: .leading, spacing: 24) {
+            LazyVStack(alignment: .leading, spacing: 22) {
                 headerSkeleton
 
-                VStack(alignment: .leading, spacing: 22) {
-                    SkeletonView(cornerRadius: 12)
-                        .frame(height: 50)
+                VStack(alignment: .leading, spacing: 24) {
+                    SkeletonView(cornerRadius: 8)
+                        .frame(height: 48)
 
-                    detailSectionSkeleton(title: "Overview", lineCount: 4)
-                    detailSectionSkeleton(title: "Genres", lineCount: 1, usesChips: true)
+                    overviewSkeleton
                     castRowSkeleton
-                    horizontalPosterRowSkeleton(title: "Similar Titles")
+                    horizontalPosterRowSkeleton(title: "More Like This")
                 }
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
             .padding(.bottom, 130)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .ignoresSafeArea(edges: .top)
     }
 
     private var headerSkeleton: some View {
-        ZStack(alignment: .bottomLeading) {
-            SkeletonView(cornerRadius: 22)
+        ZStack(alignment: .bottom) {
+            SkeletonView(cornerRadius: 0)
 
             LinearGradient(
                 colors: [
-                    .black.opacity(0.03),
-                    .black.opacity(0.36),
-                    .black.opacity(0.82)
+                    .clear,
+                    NightFlixStyle.backgroundColor.opacity(0.85),
+                    NightFlixStyle.backgroundColor
                 ],
-                startPoint: .top,
+                startPoint: .center,
                 endPoint: .bottom
             )
 
-            HStack(alignment: .bottom, spacing: 14) {
-                PosterSkeletonView(width: 116, height: 174)
-                    .shadow(color: .black.opacity(0.28), radius: 12, y: 8)
-
-                VStack(alignment: .leading, spacing: 10) {
-                    TextLineSkeletonView(width: 188, height: 24)
-                    TextLineSkeletonView(width: 142, height: 20)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(spacing: 10) {
+                TextLineSkeletonView(width: 210, height: 26)
+                TextLineSkeletonView(width: 150, height: 13)
             }
-            .padding(16)
+            .padding(.bottom, 18)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 370)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(.white.opacity(0.10), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.18), radius: 18, y: 10)
+        .frame(height: 420)
     }
 
-    private func detailSectionSkeleton(title: String, lineCount: Int, usesChips: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeaderView(title: title)
-
-            if usesChips {
-                HStack(spacing: 8) {
-                    ForEach(0..<3, id: \.self) { index in
-                        SkeletonView(cornerRadius: 12)
-                            .frame(width: [76, 92, 68][index], height: 24)
-                    }
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(0..<lineCount, id: \.self) { index in
-                        TextLineSkeletonView(width: index == lineCount - 1 ? 210 : nil, height: 12)
-                    }
-                }
+    private var overviewSkeleton: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(0..<4, id: \.self) { index in
+                TextLineSkeletonView(width: index == 3 ? 210 : nil, height: 12)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -277,14 +236,14 @@ struct DetailPageSkeletonView: View {
             SectionHeaderView(title: "Cast")
 
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: 12) {
-                    ForEach(0..<5, id: \.self) { _ in
-                        VStack(alignment: .leading, spacing: 8) {
-                            PosterSkeletonView(width: 112, height: 168)
-                            TextLineSkeletonView(width: 94, height: 11)
-                            TextLineSkeletonView(width: 68, height: 10)
+                LazyHStack(alignment: .top, spacing: 14) {
+                    ForEach(0..<6, id: \.self) { _ in
+                        VStack(spacing: 7) {
+                            PosterSkeletonView(width: 76, height: 76, cornerRadius: 38)
+                            TextLineSkeletonView(width: 64, height: 10)
+                            TextLineSkeletonView(width: 48, height: 9)
                         }
-                        .frame(width: 112, alignment: .topLeading)
+                        .frame(width: 84)
                     }
                 }
                 .padding(.vertical, 2)
@@ -298,9 +257,9 @@ struct DetailPageSkeletonView: View {
             SectionHeaderView(title: title)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: 12) {
+                LazyHStack(alignment: .top, spacing: NightflixLayout.rowItemSpacing) {
                     ForEach(0..<5, id: \.self) { _ in
-                        CardSkeletonView(width: 148, posterWidth: 126, posterHeight: 189)
+                        PosterSkeletonView(width: 110, height: 165, cornerRadius: NightflixLayout.posterCornerRadius)
                     }
                 }
                 .padding(.vertical, 2)
@@ -384,20 +343,16 @@ struct GenreChipSkeletonGrid: View {
 
 struct PosterGridSkeletonView: View {
     private let columns = [
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16)
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10)
     ]
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 18) {
-            ForEach(0..<8, id: \.self) { _ in
-                VStack(alignment: .leading, spacing: 8) {
-                    PosterSkeletonView(width: nil, height: nil)
-                        .aspectRatio(2.0 / 3.0, contentMode: .fit)
-                    TextLineSkeletonView(width: 118, height: 12)
-                    TextLineSkeletonView(width: 76, height: 10)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+        LazyVGrid(columns: columns, spacing: 14) {
+            ForEach(0..<9, id: \.self) { _ in
+                PosterSkeletonView(width: nil, height: nil, cornerRadius: NightflixLayout.posterCornerRadius)
+                    .aspectRatio(2.0 / 3.0, contentMode: .fit)
             }
         }
     }

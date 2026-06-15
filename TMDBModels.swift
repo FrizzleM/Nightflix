@@ -454,6 +454,26 @@ struct FeedItem: Identifiable, Equatable, Hashable {
         backdropPath = tv.backdropPath
     }
 
+    init(recommendation: MediaRecommendationItem, fallbackType: WatchType) {
+        let resolvedType: WatchType
+        switch recommendation.mediaType {
+        case "movie":
+            resolvedType = .movie
+        case "tv":
+            resolvedType = .tv
+        default:
+            resolvedType = fallbackType
+        }
+
+        id = recommendation.id
+        type = resolvedType
+        title = recommendation.displayTitle
+        year = recommendation.displayYear
+        overview = recommendation.overview ?? ""
+        posterPath = recommendation.posterPath
+        backdropPath = recommendation.backdropPath
+    }
+
     init?(trendingResult: TMDBTrendingResult) {
         switch trendingResult.mediaType {
         case "movie":

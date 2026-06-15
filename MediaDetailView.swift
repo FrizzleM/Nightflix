@@ -63,19 +63,20 @@ struct MediaDetailView: View {
 
             content
         }
-        .navigationTitle(currentTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .navigationDestination(item: $selectedPlayerItem) { item in
-            PlayerView(item: item)
+            PlayerView(item: item, continueWatchingManager: continueWatchingManager)
         }
-            .navigationDestination(item: $selectedDetailItem) { item in
-                MediaDetailView(
-                    item: item,
-                    historyManager: historyManager,
-                    continueWatchingManager: continueWatchingManager,
-                    myListManager: myListManager
-                )
-            }
+        .navigationDestination(item: $selectedDetailItem) { item in
+            MediaDetailView(
+                item: item,
+                historyManager: historyManager,
+                continueWatchingManager: continueWatchingManager,
+                myListManager: myListManager
+            )
+        }
         .task {
             await viewModel.loadIfNeeded(id: id, mediaType: mediaType)
         }
@@ -93,479 +94,470 @@ struct MediaDetailView: View {
             errorState(errorMessage)
         } else {
             ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(alignment: .leading, spacing: 24) {
+                LazyVStack(alignment: .leading, spacing: 22) {
                     header
 
-                    if let playErrorMessage {
-                        messageRow(playErrorMessage, systemImage: "exclamationmark.circle.fill")
-                    }
+                    VStack(alignment: .leading, spacing: 22) {
+                        if let playErrorMessage {
+                            messageRow(playErrorMessage, systemImage: "exclamationmark.circle.fill")
+                        }
 
-                    if let movie = viewModel.movieDetail {
-                        movieContent(movie)
-                    } else if let tv = viewModel.tvDetail {
-                        tvContent(tv)
+                        primaryActions
+
+                        if let movie = viewModel.movieDetail {
+                            movieContent(movie)
+                        } else if let tv = viewModel.tvDetail {
+                            tvContent(tv)
+                        }
                     }
+                    .padding(.horizontal, 20)
+                    .nightflixEntrance(isVisible: entranceVisible, delay: 0.16, yOffset: 16, scaleAmount: 0.99, animationsEnabled: animationsEnabled)
                 }
-                .padding(.horizontal, 20)
                 .padding(.bottom, 130)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .ignoresSafeArea(edges: .top)
         }
     }
+
+    // MARK: - Header
 
     private var header: some View {
-        ZStack(alignment: .bottomLeading) {
-            DetailBackdropImage(url: backdropURL ?? posterURL)
-                .frame(maxWidth: .infinity)
-                .frame(height: 370)
-                .clipped()
+        Color.clear
+            .frame(maxWidth: .infinity)
+            .frame(height: 420)
+            .overlay {
+                GeometryReader { proxy in
+                    let width = proxy.size.width
 
-            LinearGradient(
-                colors: [
-                    .black.opacity(0.05),
-                    .black.opacity(0.38),
-                    .black.opacity(0.88)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+                    ZStack(alignment: .bottom) {
+                        DetailBackdropImage(url: backdropURL ?? posterURL)
+                            .frame(width: width, height: 420)
+                            .clipped()
 
-            HStack(alignment: .bottom, spacing: 14) {
-                NightFlixPosterImage(url: posterURL, width: 116, height: 174)
-                    .shadow(color: .black.opacity(0.35), radius: 14, y: 8)
+                        LinearGradient(
+                            colors: [.black.opacity(0.55), .clear],
+                            startPoint: .top,
+                            endPoint: .center
+                        )
 
-                VStack(alignment: .leading, spacing: 9) {
-                    Text(currentTitle)
-                        .font(.title2.weight(.black))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.82)
-                        .fixedSize(horizontal: false, vertical: true)
+                        LinearGradient(
+                            colors: [
+                                .clear,
+                                NightFlixStyle.backgroundColor.opacity(0.45),
+                                NightFlixStyle.backgroundColor.opacity(0.9),
+                                NightFlixStyle.backgroundColor
+                            ],
+                            startPoint: .center,
+                            endPoint: .bottom
+                        )
 
-                    metadataLine
+                        VStack(spacing: 10) {
+                            Text(currentTitle)
+                                .font(.system(size: 30, weight: .black, design: .rounded))
+                                .foregroundStyle(.white)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(3)
+                                .minimumScaleFactor(0.7)
+                                .shadow(color: .black.opacity(0.55), radius: 8, y: 3)
+
+                            if !currentMetadata.isEmpty {
+                                Text(currentMetadata.joined(separator: "   •   "))
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.white.opacity(0.82))
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+                                    .shadow(color: .black.opacity(0.5), radius: 5, y: 2)
+                            }
+                        }
+                        .frame(width: max(width - 48, 0))
+                        .padding(.bottom, 6)
+                    }
+                    .frame(width: width, height: 420)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(16)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 370)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(.white.opacity(0.10), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.22), radius: 20, y: 12)
-        .nightflixEntrance(isVisible: entranceVisible, delay: 0.05, yOffset: 14, scaleAmount: 0.98, animationsEnabled: animationsEnabled)
     }
 
-    private var metadataLine: some View {
-        FlexibleChipRow(
-            chips: currentMetadata,
-            foregroundColor: .white.opacity(0.9),
-            backgroundColor: .white.opacity(0.15)
-        )
+    // MARK: - Primary actions
+
+    @ViewBuilder
+    private var primaryActions: some View {
+        VStack(spacing: 16) {
+            primaryPlayButton
+
+            HStack(alignment: .top, spacing: 0) {
+                myListAction
+
+                if let trailerURL = currentTrailerURL {
+                    iconAction(systemImage: "play.rectangle.fill", label: "Trailer") {
+                        HapticManager.shared.lightImpact()
+                        openURL(trailerURL)
+                    }
+                }
+
+                shareAction
+            }
+            .frame(maxWidth: .infinity)
+        }
     }
+
+    @ViewBuilder
+    private var primaryPlayButton: some View {
+        if let movie = viewModel.movieDetail {
+            bigPlayButton(title: "Play") { playMovie(movie) }
+        } else if let tv = viewModel.tvDetail, let episode = viewModel.selectedSeasonDetail?.episodes.first {
+            bigPlayButton(title: "Play  •  S\(episode.seasonNumber) E\(episode.episodeNumber)") {
+                playEpisode(episode, tv: tv)
+            }
+        }
+    }
+
+    private func bigPlayButton(title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: "play.fill")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(.white, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(NightflixPressableStyle(pressedScale: 0.97))
+        .accessibilityLabel("Play \(currentTitle)")
+    }
+
+    private var myListAction: some View {
+        let saved = isInMyList
+
+        return iconAction(
+            systemImage: saved ? "checkmark" : "plus",
+            label: "My List",
+            tint: saved ? NightFlixStyle.accentColor : .white
+        ) {
+            HapticManager.shared.lightImpact()
+            toggleMyList()
+        }
+    }
+
+    @ViewBuilder
+    private var shareAction: some View {
+        if let url = tmdbWebURL {
+            ShareLink(item: url) {
+                iconActionLabel(systemImage: "square.and.arrow.up", label: "Share", tint: .white)
+            }
+            .buttonStyle(NightflixPressableStyle(pressedScale: 0.9))
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func iconAction(
+        systemImage: String,
+        label: String,
+        tint: Color = .white,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            iconActionLabel(systemImage: systemImage, label: label, tint: tint)
+        }
+        .buttonStyle(NightflixPressableStyle(pressedScale: 0.9))
+        .frame(maxWidth: .infinity)
+    }
+
+    private func iconActionLabel(systemImage: String, label: String, tint: Color) -> some View {
+        VStack(spacing: 7) {
+            Image(systemName: systemImage)
+                .font(.system(size: 21, weight: .semibold))
+                .frame(height: 24)
+
+            Text(label)
+                .font(.caption2.weight(.semibold))
+        }
+        .foregroundStyle(tint)
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+    }
+
+    // MARK: - Movie content
 
     private func movieContent(_ movie: MovieDetail) -> some View {
-        VStack(alignment: .leading, spacing: 22) {
-            Button {
-                playMovie(movie)
-            } label: {
-                Label("Play", systemImage: "play.fill")
-                    .font(.headline.weight(.bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .foregroundStyle(.white)
-                    .background(NightFlixStyle.accentColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Play \(movie.title)")
-
-            myListButton(MyListItem(movie: movie))
+        VStack(alignment: .leading, spacing: 24) {
             overviewSection(overview: movie.overview, tagline: movie.tagline)
-            genreSection(movie.genres)
-            trailerButton(title: movie.title, url: preferredTrailerURL(from: movie.videos?.results ?? []))
+            metadataTextLines(genres: movie.genres, people: [("Director", directors(from: movie.credits?.crew ?? []))])
             castSection(movie.credits?.cast ?? [])
-            peopleSection(title: "Director", names: directors(from: movie.credits?.crew ?? []))
-            recommendationSection(title: "Similar Titles", items: movie.similar?.results ?? [], mediaType: "movie")
-            recommendationSection(title: "Recommended Titles", items: movie.recommendations?.results ?? [], mediaType: "movie")
+            recommendationsSection(
+                title: "More Like This",
+                items: mergedRecommendations(movie.recommendations?.results ?? [], movie.similar?.results ?? []),
+                mediaType: "movie"
+            )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .nightflixEntrance(isVisible: entranceVisible, delay: 0.16, yOffset: 16, scaleAmount: 0.98, animationsEnabled: animationsEnabled)
     }
+
+    // MARK: - TV content
 
     private func tvContent(_ tv: TVSeriesDetail) -> some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 24) {
             overviewSection(overview: tv.overview, tagline: tv.tagline)
-            genreSection(tv.genres)
-            trailerButton(title: tv.name, url: preferredTrailerURL(from: tv.videos?.results ?? []))
-            myListButton(MyListItem(tv: tv))
-            seasonsSection(tv)
+            metadataTextLines(genres: tv.genres, people: [("Created By", tv.createdBy.map(\.name))])
             episodesSection(tv)
             castSection(tv.credits?.cast ?? [])
-            peopleSection(title: "Created By", names: tv.createdBy.map(\.name))
-            recommendationSection(title: "Similar Series", items: tv.similar?.results ?? [], mediaType: "tv")
-            recommendationSection(title: "Recommended Series", items: tv.recommendations?.results ?? [], mediaType: "tv")
+            recommendationsSection(
+                title: "More Like This",
+                items: mergedRecommendations(tv.recommendations?.results ?? [], tv.similar?.results ?? []),
+                mediaType: "tv"
+            )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .nightflixEntrance(isVisible: entranceVisible, delay: 0.16, yOffset: 16, scaleAmount: 0.98, animationsEnabled: animationsEnabled)
     }
+
+    // MARK: - Overview & metadata text
 
     private func overviewSection(overview: String, tagline: String?) -> some View {
-        DetailSection(title: "Overview") {
-            VStack(alignment: .leading, spacing: 10) {
-                if let tagline, !tagline.isEmpty {
-                    Text(tagline)
-                        .font(.headline.weight(.semibold))
-                        .italic()
-                        .foregroundStyle(NightFlixStyle.accentColor)
-                }
-
-                Text(overview.isEmpty ? "No overview is available for this title." : overview)
-                    .font(.body)
-                    .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.76))
-                    .lineSpacing(3)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 10) {
+            if let tagline, !tagline.isEmpty {
+                Text(tagline)
+                    .font(.subheadline.weight(.semibold))
+                    .italic()
+                    .foregroundStyle(NightFlixStyle.accentColor)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(overview.isEmpty ? "No overview is available for this title." : overview)
+                .font(.subheadline)
+                .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.82))
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
-    private func genreSection(_ genres: [Genre]) -> some View {
-        if !genres.isEmpty {
-            DetailSection(title: "Genres") {
-                FlexibleChipRow(
-                    chips: genres.map(\.name),
-                    foregroundColor: NightFlixStyle.primaryTextColor,
-                    backgroundColor: NightFlixStyle.fillColor(darkOpacity: 0.08)
-                )
+    private func metadataTextLines(genres: [Genre], people: [(String, [String])]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if !genres.isEmpty {
+                metadataTextLine(label: "Genres", value: genres.map(\.name).joined(separator: ", "))
             }
-        }
-    }
 
-    @ViewBuilder
-    private func trailerButton(title: String, url: URL?) -> some View {
-        if let url {
-            Button {
-                openURL(url)
-            } label: {
-                Label("Trailer", systemImage: "play.rectangle.fill")
-                    .font(.headline.weight(.bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .foregroundStyle(NightFlixStyle.primaryTextColor)
-                    .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(NightFlixStyle.borderColor, lineWidth: 1)
-                    }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Open trailer for \(title)")
-        }
-    }
-
-    private func myListButton(_ item: MyListItem) -> some View {
-        let isSaved = myListManager.contains(mediaType: item.mediaType, tmdbId: item.tmdbId)
-
-        return Button {
-            HapticManager.shared.lightImpact()
-            myListManager.toggle(item)
-        } label: {
-            Label(isSaved ? "In Watch Later" : "Add to Watch Later", systemImage: "clock.fill")
-                .font(.headline.weight(.bold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .foregroundStyle(isSaved ? NightFlixStyle.primaryTextColor : .white)
-                .background(
-                    isSaved ? NightFlixStyle.cardColor : NightFlixStyle.accentColor,
-                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(isSaved ? NightFlixStyle.accentColor.opacity(0.85) : .clear, lineWidth: 1)
+            ForEach(Array(people.enumerated()), id: \.offset) { _, entry in
+                let names = entry.1.filter { !$0.isEmpty }
+                if !names.isEmpty {
+                    metadataTextLine(label: entry.0, value: names.joined(separator: ", "))
                 }
+            }
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(isSaved ? "Remove \(item.title) from Watch Later" : "Add \(item.title) to Watch Later")
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
+
+    private func metadataTextLine(label: String, value: String) -> some View {
+        (
+            Text("\(label):  ")
+                .foregroundStyle(NightFlixStyle.tertiaryTextColor)
+            + Text(value)
+                .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.7))
+        )
+        .font(.footnote.weight(.medium))
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Cast
 
     @ViewBuilder
     private func castSection(_ cast: [CastMember]) -> some View {
         let visibleCast = Array(cast.sorted { ($0.order ?? 999) < ($1.order ?? 999) }.prefix(12))
 
         if !visibleCast.isEmpty {
-            DetailSection(title: "Cast") {
+            VStack(alignment: .leading, spacing: NightflixLayout.sectionHeaderSpacing) {
+                SectionHeaderView(title: "Cast")
+
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(alignment: .top, spacing: 12) {
+                    LazyHStack(alignment: .top, spacing: 14) {
                         ForEach(visibleCast) { member in
-                            VStack(alignment: .leading, spacing: 8) {
-                                NightFlixPosterImage(url: member.profileURL, width: 112, height: 168)
+                            VStack(spacing: 7) {
+                                NightflixPoster(url: member.profileURL, width: 76, height: 76, cornerRadius: 38)
 
                                 Text(member.name)
-                                    .font(.caption.weight(.bold))
+                                    .font(.caption2.weight(.semibold))
                                     .foregroundStyle(NightFlixStyle.primaryTextColor)
-                                    .lineLimit(2)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .frame(width: 112, alignment: .topLeading)
+                                    .lineLimit(1)
 
                                 if let character = member.character, !character.isEmpty {
                                     Text(character)
                                         .font(.caption2)
                                         .foregroundStyle(NightFlixStyle.secondaryTextColor)
-                                        .lineLimit(2)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                        .frame(width: 112, alignment: .topLeading)
+                                        .lineLimit(1)
                                 }
                             }
-                            .frame(width: 112, alignment: .topLeading)
+                            .frame(width: 84)
                         }
                     }
                     .padding(.vertical, 2)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func peopleSection(title: String, names: [String]) -> some View {
-        let visibleNames = names.filter { !$0.isEmpty }
-
-        if !visibleNames.isEmpty {
-            DetailSection(title: title) {
-                Text(visibleNames.joined(separator: ", "))
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(NightFlixStyle.primaryTextColor)
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-    }
-
-    private func seasonsSection(_ tv: TVSeriesDetail) -> some View {
-        DetailSection(title: "Seasons") {
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(alignment: .top, spacing: 12) {
-                    ForEach(tv.seasons.filter { $0.seasonNumber > 0 }) { season in
-                        seasonCard(season, seriesId: tv.id)
-                    }
-                }
-                .padding(.vertical, 2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    private func seasonCard(_ season: Season, seriesId: Int) -> some View {
-        let isSelected = viewModel.selectedSeasonNumber == season.seasonNumber
-
-        return Button {
-            HapticManager.shared.selection()
-            playErrorMessage = nil
-            Task {
-                await viewModel.selectSeason(seriesId: seriesId, seasonNumber: season.seasonNumber)
-            }
-        } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                NightFlixPosterImage(url: season.posterURL, width: 126, height: 189)
-
-                Text(season.name)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(NightFlixStyle.primaryTextColor)
-                    .lineLimit(2)
-                    .frame(height: 38, alignment: .topLeading)
-
-                Text("Season \(season.seasonNumber)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(NightFlixStyle.secondaryTextColor)
-
-                Text("\(season.episodeCount) episodes")
-                    .font(.caption)
-                    .foregroundStyle(NightFlixStyle.secondaryTextColor)
-
-                if let airDate = season.airDate, !airDate.isEmpty {
-                    Text(airDate)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(NightFlixStyle.tertiaryTextColor)
-                        .lineLimit(1)
-                }
-            }
-            .padding(10)
-            .frame(width: 190, alignment: .topLeading)
-            .contentShape(Rectangle())
-            .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(isSelected ? NightFlixStyle.accentColor : NightFlixStyle.borderColor, lineWidth: isSelected ? 2 : 1)
-            }
-        }
-        .buttonStyle(.plain)
-    }
+    // MARK: - Episodes
 
     private func episodesSection(_ tv: TVSeriesDetail) -> some View {
-        DetailSection(title: "Episodes") {
-            VStack(alignment: .leading, spacing: 12) {
-                if viewModel.selectedSeasonNumber == nil {
-                    messageRow("Choose a season to view episodes.", systemImage: "list.bullet.rectangle")
-                } else if viewModel.isLoadingSeason {
-                    EpisodeSkeletonListView(count: 3)
-                } else if let errorMessage = viewModel.seasonErrorMessage {
-                    VStack(alignment: .leading, spacing: 10) {
-                        messageRow(errorMessage, systemImage: "exclamationmark.circle.fill")
-                        retrySeasonButton(seriesId: tv.id)
+        VStack(alignment: .leading, spacing: NightflixLayout.sectionHeaderSpacing) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Episodes")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(NightFlixStyle.primaryTextColor)
+                    .accessibilityAddTraits(.isHeader)
+
+                Spacer(minLength: 12)
+
+                seasonMenu(tv)
+            }
+
+            episodesBody(tv)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func seasonMenu(_ tv: TVSeriesDetail) -> some View {
+        let seasons = tv.seasons.filter { $0.seasonNumber > 0 }
+
+        if seasons.count > 1 {
+            Menu {
+                ForEach(seasons) { season in
+                    Button {
+                        HapticManager.shared.selection()
+                        playErrorMessage = nil
+                        Task {
+                            await viewModel.selectSeason(seriesId: tv.id, seasonNumber: season.seasonNumber)
+                        }
+                    } label: {
+                        Text(season.name)
                     }
-                } else if let seasonDetail = viewModel.selectedSeasonDetail {
-                    if seasonDetail.episodes.isEmpty {
-                        messageRow("No episodes are available for this season.", systemImage: "tray.fill")
-                    } else {
-                        ForEach(seasonDetail.episodes) { episode in
-                            episodeCard(episode, tv: tv)
+                }
+            } label: {
+                HStack(spacing: 5) {
+                    Text(currentSeasonTitle(tv))
+                        .font(.subheadline.weight(.bold))
+                        .lineLimit(1)
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.black))
+                }
+                .foregroundStyle(NightFlixStyle.primaryTextColor)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(NightFlixStyle.fillColor(darkOpacity: 0.1), in: Capsule())
+                .overlay { Capsule().stroke(NightFlixStyle.borderColor, lineWidth: 1) }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func episodesBody(_ tv: TVSeriesDetail) -> some View {
+        if viewModel.selectedSeasonNumber == nil {
+            messageRow("Choose a season to view episodes.", systemImage: "list.bullet.rectangle")
+        } else if viewModel.isLoadingSeason {
+            EpisodeSkeletonListView(count: 3)
+        } else if let errorMessage = viewModel.seasonErrorMessage {
+            VStack(alignment: .leading, spacing: 10) {
+                messageRow(errorMessage, systemImage: "exclamationmark.circle.fill")
+                retrySeasonButton(seriesId: tv.id)
+            }
+        } else if let seasonDetail = viewModel.selectedSeasonDetail {
+            if seasonDetail.episodes.isEmpty {
+                messageRow("No episodes are available for this season.", systemImage: "tray.fill")
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(seasonDetail.episodes.enumerated()), id: \.element.id) { index, episode in
+                        if index > 0 {
+                            Divider().overlay(NightFlixStyle.borderColor)
+                        }
+                        episodeRow(episode, tv: tv)
+                    }
+                }
+            }
+        }
+    }
+
+    private func episodeRow(_ episode: EpisodeDetail, tv: TVSeriesDetail) -> some View {
+        Button {
+            playEpisode(episode, tv: tv)
+        } label: {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center, spacing: 13) {
+                    ZStack {
+                        NightflixPoster(url: episode.stillURL, width: 132, height: 76, cornerRadius: 6, aspectRatio: 16.0 / 9.0)
+
+                        Circle()
+                            .fill(.black.opacity(0.4))
+                            .frame(width: 34, height: 34)
+                            .overlay {
+                                Image(systemName: "play.fill")
+                                    .font(.system(size: 13, weight: .black))
+                                    .foregroundStyle(.white)
+                            }
+                            .overlay { Circle().strokeBorder(.white.opacity(0.7), lineWidth: 1.5) }
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(episode.episodeNumber). \(episode.name)")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(NightFlixStyle.primaryTextColor)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if let runtime = runtimeText(episode.runtime) {
+                            Text(runtime)
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(NightFlixStyle.secondaryTextColor)
                         }
                     }
+
+                    Spacer(minLength: 0)
+                }
+
+                if !episode.overview.isEmpty {
+                    Text(episode.overview)
+                        .font(.footnote)
+                        .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.62))
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(.vertical, 13)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Play \(tv.name), season \(episode.seasonNumber), episode \(episode.episodeNumber)")
+    }
+
+    // MARK: - More like this
+
+    @ViewBuilder
+    private func recommendationsSection(title: String, items: [MediaRecommendationItem], mediaType: String) -> some View {
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: NightflixLayout.sectionHeaderSpacing) {
+                SectionHeaderView(title: title)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(alignment: .top, spacing: NightflixLayout.rowItemSpacing) {
+                        ForEach(items.prefix(14)) { item in
+                            PosterCard(
+                                url: item.posterURL,
+                                width: 110,
+                                accessibilityLabel: item.displayTitle,
+                                action: { openRecommendation(item, mediaType: item.mediaType ?? mediaType) }
+                            )
+                        }
+                    }
+                    .padding(.vertical, 2)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    private func episodeCard(_ episode: EpisodeDetail, tv: TVSeriesDetail) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 14) {
-                    episodeImage(episode)
-                    episodeInfo(episode)
-                }
-
-                VStack(alignment: .leading, spacing: 14) {
-                    episodeImage(episode)
-                    episodeInfo(episode)
-                }
-            }
-
-            if !episode.overview.isEmpty {
-                Text(episode.overview)
-                    .font(.subheadline)
-                    .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.68))
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            Button {
-                playEpisode(episode, tv: tv)
-            } label: {
-                Label("Play", systemImage: "play.fill")
-                    .font(.subheadline.weight(.bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .foregroundStyle(.white)
-                    .background(NightFlixStyle.accentColor, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Play \(tv.name), season \(episode.seasonNumber), episode \(episode.episodeNumber)")
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .nightFlixResultCardStyle()
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func episodeImage(_ episode: EpisodeDetail) -> some View {
-        NightFlixPosterImage(url: episode.stillURL, width: 124, height: 70)
-    }
-
-    private func episodeInfo(_ episode: EpisodeDetail) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text("Episode \(episode.episodeNumber)")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(NightFlixStyle.accentColor)
-
-            Text(episode.name)
-                .font(.headline)
-                .foregroundStyle(NightFlixStyle.primaryTextColor)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-
-            FlexibleChipRow(
-                chips: episodeMetadata(for: episode),
-                foregroundColor: NightFlixStyle.secondaryTextColor,
-                backgroundColor: NightFlixStyle.fillColor(darkOpacity: 0.07)
-            )
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder
-    private func recommendationSection(title: String, items: [MediaRecommendationItem], mediaType: String) -> some View {
-        if !items.isEmpty {
-            DetailSection(title: title) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(alignment: .top, spacing: 12) {
-                        ForEach(items.prefix(14)) { item in
-                            recommendationCard(item, mediaType: item.mediaType ?? mediaType)
-                        }
-                    }
-                    .padding(.vertical, 2)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-    }
-
-    private func recommendationCard(_ item: MediaRecommendationItem, mediaType: String) -> some View {
-        Button {
-            HapticManager.shared.lightImpact()
-            selectedDetailItem = MediaItem(
-                id: item.id,
-                mediaType: mediaType,
-                title: mediaType == "movie" ? item.displayTitle : nil,
-                name: mediaType == "tv" ? item.displayTitle : nil,
-                overview: item.overview ?? "",
-                releaseDate: item.releaseDate,
-                firstAirDate: item.firstAirDate,
-                posterPath: item.posterPath,
-                backdropPath: item.backdropPath
-            )
-        } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                NightFlixPosterImage(url: item.posterURL, width: 126, height: 189)
-
-                Text(item.displayTitle)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(NightFlixStyle.primaryTextColor)
-                    .lineLimit(2)
-                    .frame(height: 38, alignment: .topLeading)
-
-                if let year = item.displayYear {
-                    Text(year)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(NightFlixStyle.secondaryTextColor)
-                }
-
-                Label("Play", systemImage: "play.fill")
-                    .font(.subheadline.weight(.bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 9)
-                    .foregroundStyle(.white)
-                    .background(NightFlixStyle.accentColor, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-            .padding(10)
-            .frame(width: 148, alignment: .topLeading)
-            .contentShape(Rectangle())
-            .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(NightFlixStyle.borderColor, lineWidth: 1)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Play \(item.displayTitle)")
-    }
+    // MARK: - States
 
     private var loadingState: some View {
         DetailPageSkeletonView()
@@ -631,6 +623,8 @@ struct MediaDetailView: View {
             .background(NightFlixStyle.subtleFillColor, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
+    // MARK: - Derived values
+
     private var currentTitle: String {
         viewModel.movieDetail?.title ?? viewModel.tvDetail?.name ?? fallbackTitle
     }
@@ -638,6 +632,7 @@ struct MediaDetailView: View {
     private var currentMetadata: [String] {
         if let movie = viewModel.movieDetail {
             return [
+                "Movie",
                 movie.releaseYear,
                 runtimeText(movie.runtime),
                 ratingText(movie.voteAverage, voteCount: movie.voteCount)
@@ -647,15 +642,34 @@ struct MediaDetailView: View {
         if let tv = viewModel.tvDetail {
             let yearRange = [tv.firstAirYear, tv.lastAirYear].compactMap { $0 }.joined(separator: "-")
             return [
+                "Series",
                 yearRange.isEmpty ? nil : yearRange,
-                "\(tv.numberOfSeasons) seasons",
-                "\(tv.numberOfEpisodes) episodes",
-                tv.status,
+                "\(tv.numberOfSeasons) Season\(tv.numberOfSeasons == 1 ? "" : "s")",
                 ratingText(tv.voteAverage, voteCount: tv.voteCount)
             ].compactMap { $0 }
         }
 
         return [mediaType == "movie" ? "Movie" : "TV Series"]
+    }
+
+    private var currentTrailerURL: URL? {
+        let videos = viewModel.movieDetail?.videos?.results ?? viewModel.tvDetail?.videos?.results ?? []
+        return preferredTrailerURL(from: videos)
+    }
+
+    private var isInMyList: Bool {
+        guard let type = MediaType(tmdbValue: currentMediaType) else { return false }
+        return myListManager.contains(mediaType: type, tmdbId: id)
+    }
+
+    private var currentMediaType: String {
+        if viewModel.movieDetail != nil { return "movie" }
+        if viewModel.tvDetail != nil { return "tv" }
+        return mediaType
+    }
+
+    private var tmdbWebURL: URL? {
+        URL(string: "https://www.themoviedb.org/\(currentMediaType)/\(id)")
     }
 
     private var posterURL: URL? {
@@ -674,6 +688,30 @@ struct MediaDetailView: View {
         settings.animationMode != .off && !reduceMotion
     }
 
+    private func currentSeasonTitle(_ tv: TVSeriesDetail) -> String {
+        guard let number = viewModel.selectedSeasonNumber else { return "Season" }
+        if let season = tv.seasons.first(where: { $0.seasonNumber == number }) {
+            return season.name
+        }
+        return "Season \(number)"
+    }
+
+    private func mergedRecommendations(
+        _ primary: [MediaRecommendationItem],
+        _ secondary: [MediaRecommendationItem]
+    ) -> [MediaRecommendationItem] {
+        var seen = Set<Int>()
+        var merged: [MediaRecommendationItem] = []
+
+        for item in primary + secondary where seen.insert(item.id).inserted {
+            merged.append(item)
+        }
+
+        return merged
+    }
+
+    // MARK: - Actions
+
     private func startEntrance() {
         guard !entranceVisible else { return }
 
@@ -687,11 +725,48 @@ struct MediaDetailView: View {
         }
     }
 
+    private func toggleMyList() {
+        let item: MyListItem?
+        if let movie = viewModel.movieDetail {
+            item = MyListItem(movie: movie)
+        } else if let tv = viewModel.tvDetail {
+            item = MyListItem(tv: tv)
+        } else {
+            item = nil
+        }
+
+        guard let item else { return }
+        myListManager.toggle(item)
+    }
+
+    private func openRecommendation(_ item: MediaRecommendationItem, mediaType: String) {
+        HapticManager.shared.lightImpact()
+        selectedDetailItem = MediaItem(
+            id: item.id,
+            mediaType: mediaType,
+            title: mediaType == "movie" ? item.displayTitle : nil,
+            name: mediaType == "tv" ? item.displayTitle : nil,
+            overview: item.overview ?? "",
+            releaseDate: item.releaseDate,
+            firstAirDate: item.firstAirDate,
+            posterPath: item.posterPath,
+            backdropPath: item.backdropPath
+        )
+    }
+
     private func playMovie(_ movie: MovieDetail) {
         playErrorMessage = nil
         HapticManager.shared.mediumImpact()
 
-        guard let url = StreamingProviderURLBuilder.movieURL(tmdbId: movie.id) else {
+        guard let url = StreamingProviderURLBuilder.movieURL(
+            tmdbId: movie.id,
+            progressSeconds: continueWatchingManager.resumeSeconds(
+                type: .movie,
+                tmdbId: String(movie.id),
+                season: nil,
+                episode: nil
+            )
+        ) else {
             playErrorMessage = StreamingProviderURLBuilder.configurationErrorMessage
             HapticManager.shared.error()
             return
@@ -724,7 +799,13 @@ struct MediaDetailView: View {
         guard let url = StreamingProviderURLBuilder.tvURL(
             tmdbId: tv.id,
             season: episode.seasonNumber,
-            episode: episode.episodeNumber
+            episode: episode.episodeNumber,
+            progressSeconds: continueWatchingManager.resumeSeconds(
+                type: .tv,
+                tmdbId: String(tv.id),
+                season: episode.seasonNumber,
+                episode: episode.episodeNumber
+            )
         ) else {
             playErrorMessage = StreamingProviderURLBuilder.configurationErrorMessage
             HapticManager.shared.error()
@@ -784,14 +865,7 @@ struct MediaDetailView: View {
 
     private func ratingText(_ rating: Double, voteCount: Int) -> String? {
         guard rating > 0 else { return nil }
-        return String(format: "%.1f TMDB", rating)
-    }
-
-    private func episodeMetadata(for episode: EpisodeDetail) -> [String] {
-        [
-            episode.airDate,
-            runtimeText(episode.runtime)
-        ].compactMap { $0 }.filter { !$0.isEmpty }
+        return String(format: "★ %.1f", rating)
     }
 }
 
@@ -902,49 +976,6 @@ final class MediaDetailViewModel {
 
         isLoadingSeason = false
         seasonRequestID = nil
-    }
-}
-
-private struct DetailSection<Content: View>: View {
-    let title: String
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionHeaderView(title: title)
-
-            content
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct FlexibleChipRow: View {
-    let chips: [String]
-    let foregroundColor: Color
-    let backgroundColor: Color
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(spacing: 7) {
-                chipViews
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder
-    private var chipViews: some View {
-        ForEach(chips.filter { !$0.isEmpty }, id: \.self) { chip in
-            Text(chip)
-                .font(.caption.weight(.bold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .foregroundStyle(foregroundColor)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(backgroundColor, in: Capsule())
-        }
     }
 }
 

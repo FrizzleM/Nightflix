@@ -7,6 +7,13 @@ struct FeedSection: Equatable {
     var errorMessage: String?
 }
 
+/// A single "Because you watched <seedTitle>" rail of recommendations.
+struct PersonalizedRow: Identifiable, Equatable {
+    let id: String
+    let seedTitle: String
+    let items: [FeedItem]
+}
+
 @Observable
 @MainActor
 final class FeedViewModel {
@@ -17,10 +24,18 @@ final class FeedViewModel {
     var topRatedSeries = FeedSection()
     var featuredHeroItem: MediaItem?
     var isLoadingFeaturedHero = false
+    var personalizedRows: [PersonalizedRow] = []
+    var isLoadingPersonalizedRows = false
+
+    private static let maxPersonalizedSeeds = 4
+    private static let minPersonalizedRowItems = 4
+    private static let maxPersonalizedRowItems = 16
 
     private let service: TMDBService
     private var hasLoaded = false
     private var activeRequestID: UUID?
+    private var activePersonalizedRequestID: UUID?
+    private var loadedSeedSignature = ""
 
     init() {
         self.service = TMDBService()
@@ -137,6 +152,116 @@ final class FeedViewModel {
         } catch {
             return FeedSection(errorMessage: error.localizedDescription)
         }
+    }
+
+    // MARK: - Personalized "Because you watched" rows
+
+    private struct PersonalizationSeed {
+        let id: Int
+        let type: WatchType
+        let title: String
+
+        var key: String { "\(type.rawValue)-\(id)" }
+    }
+
+    /// Builds (or refreshes) the personalized rails from the user's watch history.
+    /// Seeds are the most-recently watched distinct titles; each produces a row of
+    /// TMDB recommendations, de-duplicated globally and stripped of already-watched
+    /// titles. Rows are revealed progressively as each seed's data arrives.
+    func loadPersonalizedRows(from history: [WatchItem], force: Bool = false) async {
+        let seeds = personalizationSeeds(from: history)
+
+        guard !seeds.isEmpty else {
+            activePersonalizedRequestID = nil
+            loadedSeedSignature = ""
+            personalizedRows = []
+            isLoadingPersonalizedRows = false
+            return
+        }
+
+        let signature = seeds.map(\.key).joined(separator: "|")
+        if !force, signature == loadedSeedSignature {
+            return
+        }
+
+        let requestID = UUID()
+        activePersonalizedRequestID = requestID
+        isLoadingPersonalizedRows = true
+
+        let watchedKeys = Set(
+            history.compactMap { item -> String? in
+                guard let intId = Int(item.tmdbId) else { return nil }
+                return Self.itemKey(type: item.type, id: intId)
+            }
+        )
+
+        var seenIDs = Set<Int>()
+        var rows: [PersonalizedRow] = []
+
+        for seed in seeds {
+            let recommendations = await loadRecommendations(for: seed)
+            guard activePersonalizedRequestID == requestID else { return }
+
+            var rowItems: [FeedItem] = []
+            var rowItemIDs = Set<Int>()
+            for item in recommendations {
+                guard item.id != seed.id, item.posterPath != nil else { continue }
+                guard !watchedKeys.contains(Self.itemKey(type: item.type, id: item.id)) else { continue }
+                guard !seenIDs.contains(item.id), rowItemIDs.insert(item.id).inserted else { continue }
+
+                rowItems.append(item)
+                if rowItems.count >= Self.maxPersonalizedRowItems { break }
+            }
+
+            guard rowItems.count >= Self.minPersonalizedRowItems else { continue }
+
+            seenIDs.formUnion(rowItemIDs)
+            rows.append(PersonalizedRow(id: seed.key, seedTitle: seed.title, items: rowItems))
+            personalizedRows = rows
+        }
+
+        guard activePersonalizedRequestID == requestID else { return }
+
+        personalizedRows = rows
+        loadedSeedSignature = signature
+        isLoadingPersonalizedRows = false
+        activePersonalizedRequestID = nil
+    }
+
+    private func personalizationSeeds(from history: [WatchItem]) -> [PersonalizationSeed] {
+        var seeds: [PersonalizationSeed] = []
+        var seenKeys = Set<String>()
+
+        for item in history {
+            guard let intId = Int(item.tmdbId) else { continue }
+            let seed = PersonalizationSeed(id: intId, type: item.type, title: item.title)
+            guard seenKeys.insert(seed.key).inserted else { continue }
+
+            seeds.append(seed)
+            if seeds.count >= Self.maxPersonalizedSeeds { break }
+        }
+
+        return seeds
+    }
+
+    private func loadRecommendations(for seed: PersonalizationSeed) async -> [FeedItem] {
+        do {
+            let results: [MediaRecommendationItem]
+            switch seed.type {
+            case .movie:
+                results = try await service.movieRecommendations(movieId: seed.id)
+            case .tv:
+                results = try await service.tvRecommendations(seriesId: seed.id)
+            }
+
+            return results.map { FeedItem(recommendation: $0, fallbackType: seed.type) }
+        } catch {
+            return []
+        }
+    }
+
+    private static func itemKey(type: WatchType, id: Int) -> String {
+        "\(type.rawValue)-\(id)"
     }
 
     private func section(from items: [FeedItem]) -> FeedSection {

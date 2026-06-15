@@ -154,6 +154,20 @@ struct TMDBService {
         return response.results
     }
 
+    func movieRecommendations(movieId: Int) async throws -> [MediaRecommendationItem] {
+        let response: TMDBSearchResponse<MediaRecommendationItem> = try await requestSearch(
+            path: "/3/movie/\(movieId)/recommendations"
+        )
+        return response.results
+    }
+
+    func tvRecommendations(seriesId: Int) async throws -> [MediaRecommendationItem] {
+        let response: TMDBSearchResponse<MediaRecommendationItem> = try await requestSearch(
+            path: "/3/tv/\(seriesId)/recommendations"
+        )
+        return response.results
+    }
+
     func tvSeriesDetails(seriesId: Int) async throws -> TVSeriesDetails {
         try await requestDecoded(path: "/3/tv/\(seriesId)")
     }

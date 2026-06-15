@@ -15,6 +15,8 @@ struct NightFlixApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(settings)
+                .environment(\.nightflixAccent, settings.accentColor)
+                .tint(settings.accentColor)
                 .preferredColorScheme(settings.preferredColorScheme)
         }
     }
