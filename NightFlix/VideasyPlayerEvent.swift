@@ -1,30 +1,25 @@
 import Foundation
 
-/// A watch-progress event emitted by the Vidking embed player via `window.postMessage`.
+/// A watch-progress update emitted by the Videasy embed player via `window.postMessage`.
 ///
-/// The player wraps each event as `{ "type": "PLAYER_EVENT", "data": { … } }`. This
-/// type models the inner `data` payload and is tolerant of missing or differently typed
-/// fields, since the bridge receives loosely-typed JSON from JavaScript.
-struct VidkingPlayerEvent: Equatable {
-    enum Kind: String {
-        case timeupdate
-        case play
-        case pause
-        case ended
-        case seeked
-        case unknown
-    }
-
-    let event: Kind
-    /// Current playback position in seconds.
+/// Videasy delivers each update as a JSON string on `event.data` with a flat payload —
+/// there is no `{ type, data }` envelope and no discrete event kinds; the player simply
+/// streams periodic progress. This type models that payload and is tolerant of missing
+/// or differently typed fields, since the bridge receives loosely-typed JSON from
+/// JavaScript.
+///
+/// Documented fields: `id`, `type` (movie/tv/anime), `progress` (percent), `timestamp`
+/// (playback position in seconds), `duration` (seconds), `season`, `episode`.
+struct VideasyPlayerEvent: Equatable {
+    /// Current playback position in seconds (Videasy's `timestamp`).
     let currentTime: Double
     /// Total duration in seconds (0 when unknown).
     let duration: Double
     /// Watch progress as a percentage (0…100) as reported by the player.
     let progress: Double
-    /// TMDB content id, as a string.
+    /// Content id, as a string.
     let id: String
-    /// "movie" or "tv".
+    /// "movie", "tv", or "anime".
     let mediaType: String
     let season: Int?
     let episode: Int?
@@ -41,8 +36,10 @@ struct VidkingPlayerEvent: Equatable {
         return min(max(value, 0), 1)
     }
 
-    /// Builds an event from the loosely-typed dictionary delivered by the JS bridge.
-    /// Accepts either the full envelope (`{type, data}`) or a bare `data` dictionary.
+    /// Builds an event from the loosely-typed value delivered by the JS bridge, which is
+    /// either a decoded dictionary or a JSON string. Tolerates an optional `data` wrapper
+    /// and, for resilience, Videasy's `timestamp`/`type` keys as well as the legacy
+    /// `currentTime`/`mediaType` names.
     init?(payload: Any) {
         let root: [String: Any]
         if let dictionary = payload as? [String: Any] {
@@ -55,22 +52,19 @@ struct VidkingPlayerEvent: Equatable {
             return nil
         }
 
-        // Reject envelopes that are explicitly not player events.
-        if let envelopeType = root["type"] as? String, envelopeType != "PLAYER_EVENT" {
-            return nil
-        }
-
-        // Unwrap the `{ "type": "PLAYER_EVENT", "data": { … } }` envelope if present.
+        // Unwrap an optional `{ "data": { … } }` wrapper if one is present.
         let data = (root["data"] as? [String: Any]) ?? root
 
-        guard let rawEvent = data["event"] as? String else { return nil }
+        // A genuine progress update carries a playback position and/or a percentage.
+        let timestamp = Self.double(data["timestamp"]) ?? Self.double(data["currentTime"])
+        let reportedProgress = Self.double(data["progress"])
+        guard timestamp != nil || reportedProgress != nil else { return nil }
 
-        event = Kind(rawValue: rawEvent) ?? .unknown
-        currentTime = Self.double(data["currentTime"]) ?? 0
+        currentTime = timestamp ?? 0
         duration = Self.double(data["duration"]) ?? 0
-        progress = Self.double(data["progress"]) ?? 0
+        progress = reportedProgress ?? 0
         id = Self.string(data["id"]) ?? ""
-        mediaType = (data["mediaType"] as? String) ?? ""
+        mediaType = (data["type"] as? String) ?? (data["mediaType"] as? String) ?? ""
         season = Self.int(data["season"])
         episode = Self.int(data["episode"])
     }

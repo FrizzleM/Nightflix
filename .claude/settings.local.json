@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xcodebuild -list -project NightFlix.xcodeproj)",
+      "Bash(xcodebuild -showsdks)",
+      "Bash(xcrun simctl *)",
+      "Bash(mdfind -name \"Xcode.app\")",
+      "Bash(export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer)",
+      "Bash(/Applications/Xcode-beta.app/Contents/Developer/usr/bin/xcodebuild -version)",
+      "Bash(/Applications/Xcode-beta.app/Contents/Developer/usr/bin/xcodebuild -list -project NightFlix.xcodeproj)",
+      "Bash(time xcodebuild -project NightFlix.xcodeproj -scheme NightFlix -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17' -configuration Debug build CODE_SIGNING_ALLOWED=NO)",
+      "Bash(xcodebuild -project NightFlix.xcodeproj -scheme NightFlix -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17' -configuration Debug build CODE_SIGNING_ALLOWED=NO)"
+    ]
+  }
+}

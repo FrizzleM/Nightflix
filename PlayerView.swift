@@ -100,25 +100,20 @@ struct PlayerView: View {
         }
     }
 
-    private func handlePlayerEvent(_ event: VidkingPlayerEvent) {
+    private func handlePlayerEvent(_ event: VideasyPlayerEvent) {
         // Only act on events for the title we launched (ignore unrelated frames).
         guard let continueWatchingManager, event.id == item.tmdbId else { return }
 
-        // A finished movie leaves the rail; a series is left to advance via its own
-        // next-episode events.
-        if event.event == .ended, item.type == .movie {
-            continueWatchingManager.markFinished(type: item.type, tmdbId: item.tmdbId)
-            return
-        }
-
+        // Videasy streams periodic progress updates only (no discrete "ended" event), so
+        // a finished movie is inferred once it's effectively fully watched and then
+        // leaves the rail. A series is left to advance via its own next-episode events.
         if item.type == .movie, event.fraction >= Self.completionFraction {
             continueWatchingManager.markFinished(type: item.type, tmdbId: item.tmdbId)
             return
         }
 
-        // Throttle the continuous `timeupdate` stream; persist discrete events at once.
-        if event.event == .timeupdate,
-           abs(event.currentTime - lastPersistedSeconds) < Self.persistThreshold {
+        // Throttle the continuous progress stream to persist at most every few seconds.
+        if abs(event.currentTime - lastPersistedSeconds) < Self.persistThreshold {
             return
         }
         lastPersistedSeconds = event.currentTime
@@ -168,7 +163,7 @@ struct PlayerView: View {
                 type: .movie,
                 title: "Sample Movie",
                 tmdbId: "1078605",
-                generatedURL: URL(string: "https://example.com/embed/movie/1078605?color=e50914&autoPlay=true&nextEpisode=true&episodeSelector=true")!
+                generatedURL: URL(string: "https://player.videasy.net/movie/1078605?color=e50914&overlay=true")!
             )
         )
     }

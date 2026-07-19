@@ -7,7 +7,7 @@ struct WebView: UIViewRepresentable {
     @Binding var isLoading: Bool
     @Binding var errorMessage: String?
     /// Called on the main thread whenever the embedded player reports a progress event.
-    var onPlayerEvent: ((VidkingPlayerEvent) -> Void)? = nil
+    var onPlayerEvent: ((VideasyPlayerEvent) -> Void)? = nil
 
     /// Name of the JS message channel and the injected listener script.
     private static let messageHandlerName = "nightflixPlayerEvents"
@@ -57,18 +57,27 @@ struct WebView: UIViewRepresentable {
         context.coordinator.load(url, in: webView)
     }
 
-    /// Listens for the Vidking player's `postMessage` events on the parent window and
-    /// forwards `PLAYER_EVENT` payloads to the native bridge. Mirrors the integration
-    /// snippet from the Vidking docs.
+    /// Listens for the Videasy player's `postMessage` progress updates on the parent
+    /// window and forwards them to the native bridge. Videasy posts each update as a
+    /// JSON string with a flat payload (no `{ type, data }` envelope), so we parse it
+    /// and forward only messages that actually carry playback progress — ignoring the
+    /// unrelated `postMessage` traffic that shares the window. Mirrors the integration
+    /// snippet from the Videasy docs.
     private static let progressBridgeScript = """
     (function () {
+        function looksLikeProgressEvent(payload) {
+            if (!payload || typeof payload !== "object") { return false; }
+            var hasPosition = payload.timestamp !== undefined || payload.progress !== undefined;
+            var hasIdentity = payload.id !== undefined || payload.type !== undefined;
+            return hasPosition && hasIdentity;
+        }
         function forward(raw) {
             try {
                 var payload = raw;
                 if (typeof raw === "string") {
                     try { payload = JSON.parse(raw); } catch (e) { return; }
                 }
-                if (!payload || payload.type !== "PLAYER_EVENT") { return; }
+                if (!looksLikeProgressEvent(payload)) { return; }
                 window.webkit.messageHandlers.\(messageHandlerName).postMessage(payload);
             } catch (e) {}
         }
@@ -76,8 +85,8 @@ struct WebView: UIViewRepresentable {
     })();
     """
 
-    /// Works around a Vidking player bug: when the embed is opened with a `progress`
-    /// (resume) start time, the player re-applies that exact seek on *every* playback
+    /// Works around an embed-player quirk: when the embed is opened with a `progress`
+    /// (resume) start time, the player can re-apply that exact seek on *every* playback
     /// tick, which snaps the video back and makes it loop on the resume second.
     ///
     /// We intercept the `<video>` element's `currentTime` setter and only honor a seek
@@ -174,13 +183,13 @@ struct WebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         @Binding private var isLoading: Bool
         @Binding private var errorMessage: String?
-        var onPlayerEvent: ((VidkingPlayerEvent) -> Void)?
+        var onPlayerEvent: ((VideasyPlayerEvent) -> Void)?
         private var requestedURL: URL?
 
         init(
             isLoading: Binding<Bool>,
             errorMessage: Binding<String?>,
-            onPlayerEvent: ((VidkingPlayerEvent) -> Void)?
+            onPlayerEvent: ((VideasyPlayerEvent) -> Void)?
         ) {
             _isLoading = isLoading
             _errorMessage = errorMessage
@@ -191,7 +200,7 @@ struct WebView: UIViewRepresentable {
             _ userContentController: WKUserContentController,
             didReceive message: WKScriptMessage
         ) {
-            guard let event = VidkingPlayerEvent(payload: message.body) else { return }
+            guard let event = VideasyPlayerEvent(payload: message.body) else { return }
 
             DispatchQueue.main.async { [weak self] in
                 self?.onPlayerEvent?(event)

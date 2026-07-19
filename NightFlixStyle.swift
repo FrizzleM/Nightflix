@@ -44,7 +44,7 @@ enum AppSettingsStorageKey {
 enum NightFlixUserConfiguration {
     /// Credentials are baked in — the app requires no setup or user input.
     static let defaultTMDBCredential = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MTNlY2VkZmQ1NmVkNDZiMDBiZTg1N2Q3ODg3NTE1MSIsIm5iZiI6MTc3OTYyMzA4Mi4xNzUsInN1YiI6IjZhMTJlNGFhOWFkOWYxOWE3ZWE5Y2NiZiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.8g0u3KwAVxnWszrKGfqvxrUl0VuG-_e0ZvTv5xDVRd4"
-    static let defaultStreamingProviderBaseURL = "vidking.net"
+    static let defaultStreamingProviderBaseURL = "player.videasy.net"
     /// The original Nightflix red, used when no custom accent has been chosen.
     static let defaultAccentColorHex = "e50914"
 
@@ -433,18 +433,18 @@ enum StreamingProviderURLBuilder {
     static let configurationErrorMessage = "Add a movie provider URL in Settings before playing."
 
     static func movieURL(tmdbId: Int, progressSeconds: Int? = nil) -> URL? {
-        url(appending: "/embed/movie/\(tmdbId)", progressSeconds: progressSeconds)
+        url(appending: "/movie/\(tmdbId)", isSeries: false, progressSeconds: progressSeconds)
     }
 
     static func tvURL(tmdbId: Int, season: Int, episode: Int, progressSeconds: Int? = nil) -> URL? {
-        url(appending: "/embed/tv/\(tmdbId)/\(season)/\(episode)", progressSeconds: progressSeconds)
+        url(appending: "/tv/\(tmdbId)/\(season)/\(episode)", isSeries: true, progressSeconds: progressSeconds)
     }
 
     private static var providerBaseURL: String {
         NightFlixUserConfiguration.effectiveStreamingProviderBaseURL
     }
 
-    private static func url(appending embedPath: String, progressSeconds: Int?) -> URL? {
+    private static func url(appending embedPath: String, isSeries: Bool, progressSeconds: Int?) -> URL? {
         guard !providerBaseURL.isEmpty,
               var components = URLComponents(string: providerBaseURL),
               components.scheme != nil,
@@ -460,12 +460,12 @@ enum StreamingProviderURLBuilder {
 
         components.path = "/\(combinedPath)"
 
-        // Vidking's `progress` query param sets the resume start time (seconds). The
-        // player seeks there correctly, but it *re-applies* that seek on every
-        // playback tick, which snaps the video back and makes it loop on the resume
-        // second. We keep the param (it's what actually resumes) and suppress the
-        // buggy repeats in the WebView — see `WebView.resumeLoopGuardScript`.
-        var queryItems = (components.queryItems ?? []) + fixedPlaybackQueryItems
+        // Videasy's `progress` query param sets the resume start time (seconds). Some
+        // embed players re-apply that seek on every playback tick, which snaps the
+        // video back and makes it loop on the resume second. We keep the param (it's
+        // what actually resumes) and suppress any such repeats in the WebView — see
+        // `WebView.resumeLoopGuardScript`.
+        var queryItems = (components.queryItems ?? []) + playbackQueryItems(isSeries: isSeries)
         if let progressSeconds, progressSeconds > 0 {
             queryItems.append(URLQueryItem(name: "progress", value: String(progressSeconds)))
         }
@@ -474,13 +474,24 @@ enum StreamingProviderURLBuilder {
         return components.url
     }
 
-    private static var fixedPlaybackQueryItems: [URLQueryItem] {
-        [
+    /// Videasy player parameters (see the Videasy embed docs). `color` themes the
+    /// player to the app accent (hex, no `#`) and `overlay` enables the Netflix-style
+    /// paused overlay; the episode-navigation params only apply to TV series.
+    private static func playbackQueryItems(isSeries: Bool) -> [URLQueryItem] {
+        var items = [
             URLQueryItem(name: "color", value: NightFlixUserConfiguration.effectiveAccentColorHex),
-            URLQueryItem(name: "autoPlay", value: "true"),
-            URLQueryItem(name: "nextEpisode", value: "true"),
-            URLQueryItem(name: "episodeSelector", value: "true")
+            URLQueryItem(name: "overlay", value: "true")
         ]
+
+        if isSeries {
+            items.append(contentsOf: [
+                URLQueryItem(name: "nextEpisode", value: "true"),
+                URLQueryItem(name: "episodeSelector", value: "true"),
+                URLQueryItem(name: "autoplayNextEpisode", value: "true")
+            ])
+        }
+
+        return items
     }
 }
 
