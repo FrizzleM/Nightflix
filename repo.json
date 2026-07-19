@@ -22,11 +22,11 @@
       "screenshots": [],
       "versions": [
         {
-          "downloadURL": "https://github.com/FrizzleM/Nightflix/releases/download/v2.1.0/Nightflix.ipa",
-          "size": 6263274,
-          "version": "2.1.0",
+          "downloadURL": "https://github.com/FrizzleM/Nightflix/releases/download/v2.2.0/NightFlix.ipa",
+          "size": 6282415,
+          "version": "2.2.0",
           "buildVersion": "1",
-          "date": "2026-06-15T23:53:58Z",
+          "date": "2026-07-19T14:40:40Z",
           "localizedDescription": "Adds an optional in-app update check.",
           "minOSVersion": "17.0"
         }
@@ -35,10 +35,10 @@
         "entitlements": [],
         "privacy": {}
       },
-      "version": "2.1.0",
-      "versionDate": "2026-06-15T23:53:58Z",
-      "size": 6263274,
-      "downloadURL": "https://github.com/FrizzleM/Nightflix/releases/download/v2.1.0/Nightflix.ipa"
+      "version": "2.2.0",
+      "versionDate": "2026-07-19T14:40:40Z",
+      "size": 6282415,
+      "downloadURL": "https://github.com/FrizzleM/Nightflix/releases/download/v2.2.0/NightFlix.ipa"
     }
   ],
   "news": []
