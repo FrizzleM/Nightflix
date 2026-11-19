@@ -19,31 +19,33 @@ struct AboutView: View {
             ZStack {
                 NightFlixStyle.backgroundColor.ignoresSafeArea()
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        header
-
-                        VStack(spacing: 12) {
-                            externalLink(title: "GitHub", systemImage: "chevron.left.forwardslash.chevron.right", url: "https://github.com/FrizzleM")
-                                .nightflixEntrance(isVisible: entranceVisible, delay: 0.29, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
-                            externalLink(title: "YouTube", systemImage: "play.rectangle.fill", url: "https://www.youtube.com/@frizzleofficial")
-                                .nightflixEntrance(isVisible: entranceVisible, delay: 0.35, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
-                            externalLink(title: "Ko-fi", systemImage: "cup.and.saucer.fill", url: "https://ko-fi.com/frizzlem")
-                                .nightflixEntrance(isVisible: entranceVisible, delay: 0.41, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
-                            externalLink(title: "Join my Discord", systemImage: "bubble.left.and.bubble.right.fill", url: "https://discord.gg/sjBcHXhS4")
-                                .nightflixEntrance(isVisible: entranceVisible, delay: 0.47, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
-                            settingsLink
-                                .nightflixEntrance(isVisible: entranceVisible, delay: 0.53, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
-                        }
-                        .padding(.horizontal, 20)
-
-                        appVersionFooter
-                            .nightflixEntrance(isVisible: entranceVisible, delay: 0.59, yOffset: 8, animationsEnabled: aboutAnimationsEnabled)
+                GeometryReader { geo in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 24) {
+                            VStack(spacing: 14) {
+                                externalLink(title: "GitHub", subtitle: "Source code and releases", systemImage: "chevron.left.forwardslash.chevron.right", url: "https://github.com/FrizzleM")
+                                    .nightflixEntrance(isVisible: entranceVisible, delay: 0.29, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
+                                externalLink(title: "YouTube", subtitle: "@frizzleofficial", systemImage: "play.rectangle.fill", url: "https://www.youtube.com/@frizzleofficial")
+                                    .nightflixEntrance(isVisible: entranceVisible, delay: 0.35, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
+                                externalLink(title: "Ko-fi", subtitle: "Support development", systemImage: "cup.and.saucer.fill", url: "https://ko-fi.com/frizzlem")
+                                    .nightflixEntrance(isVisible: entranceVisible, delay: 0.41, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
+                                externalLink(title: "Join my Discord", subtitle: "Chat with the community", systemImage: "bubble.left.and.bubble.right.fill", url: "https://discord.gg/sjBcHXhS4")
+                                    .nightflixEntrance(isVisible: entranceVisible, delay: 0.47, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
+                                settingsLink
+                                    .nightflixEntrance(isVisible: entranceVisible, delay: 0.53, yOffset: 12, animationsEnabled: aboutAnimationsEnabled)
+                            }
                             .padding(.horizontal, 20)
-                            .padding(.bottom, 108)
+
+                            appVersionFooter
+                                .nightflixEntrance(isVisible: entranceVisible, delay: 0.59, yOffset: 8, animationsEnabled: aboutAnimationsEnabled)
+                                .padding(.horizontal, 20)
+                        }
+                        .padding(.vertical, 20)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        // Centre the block vertically, while still allowing it to
+                        // scroll if it ever outgrows the screen.
+                        .frame(minHeight: geo.size.height, alignment: .center)
                     }
-                    .padding(.vertical, 20)
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
@@ -63,21 +65,6 @@ struct AboutView: View {
         .tint(NightFlixStyle.accentColor)
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            NightflixTitleView(
-                showTitle: showNightflixTitle,
-                shouldAnimate: shouldAnimateNightflixTitle
-            )
-
-            Text("by Frizzle")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.74))
-                .nightflixEntrance(isVisible: entranceVisible, delay: 0.1, yOffset: 12, scaleAmount: 0.98, animationsEnabled: aboutAnimationsEnabled)
-        }
-        .padding(.horizontal, 20)
-    }
-
     private var appVersionText: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
 
@@ -91,7 +78,7 @@ struct AboutView: View {
     private var appVersionFooter: some View {
         Text(appVersionText)
             .font(.footnote.weight(.semibold))
-            .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.52, light: .secondaryLabel))
+            .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.52))
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.top, 12)
@@ -139,7 +126,7 @@ struct AboutView: View {
         }
     }
 
-    private func externalLink(title: String, systemImage: String, url: String) -> some View {
+    private func externalLink(title: String, subtitle: String, systemImage: String, url: String) -> some View {
         Button {
             guard let destination = URL(string: url) else {
                 HapticManager.shared.error()
@@ -149,26 +136,41 @@ struct AboutView: View {
             HapticManager.shared.lightImpact()
             openURL(destination)
         } label: {
-            HStack(spacing: 14) {
-                Image(systemName: systemImage)
-                    .font(.headline)
-                    .foregroundStyle(NightFlixStyle.accentColor)
-                    .frame(width: 28)
+            HStack(spacing: 15) {
+                ZStack {
+                    Circle()
+                        .fill(NightFlixStyle.accentColor.opacity(0.12))
+                        .frame(width: 46, height: 46)
 
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(NightFlixStyle.primaryTextColor)
+                    Image(systemName: systemImage)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(NightFlixStyle.accentColor)
+                }
 
-                Spacer()
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(NightFlixStyle.primaryTextColor)
+
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.5))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+
+                Spacer(minLength: 8)
 
                 Image(systemName: "arrow.up.right")
-                    .font(.footnote.weight(.bold))
-                    .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.45, light: .tertiaryLabel))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.45))
             }
-            .padding(16)
-            .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: 84)
+            .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(NightFlixStyle.borderColor(darkOpacity: 0.07), lineWidth: 1)
             }
         }
@@ -193,11 +195,19 @@ struct AboutView: View {
                         .foregroundStyle(NightFlixStyle.accentColor)
                 }
 
-                Text("Settings")
-                    .font(.title3.weight(.black))
-                    .foregroundStyle(NightFlixStyle.primaryTextColor)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Settings")
+                        .font(.title3.weight(.black))
+                        .foregroundStyle(NightFlixStyle.primaryTextColor)
 
-                Spacer()
+                    Text("Accent colour, haptics, data")
+                        .font(.subheadline)
+                        .foregroundStyle(NightFlixStyle.textColor(darkOpacity: 0.5))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+
+                Spacer(minLength: 8)
 
                 Image(systemName: "chevron.right")
                     .font(.headline.weight(.black))
@@ -207,7 +217,7 @@ struct AboutView: View {
             }
             .padding(.horizontal, 18)
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 76)
+            .frame(minHeight: 92)
             .background(NightFlixStyle.cardColor, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -242,7 +252,7 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    appearanceSection
+                    hapticsSection
                     accentColorSection
                     apiKeyLink
                     updatesSection
@@ -283,22 +293,8 @@ struct SettingsView: View {
         .tint(NightFlixStyle.accentColor)
     }
 
-    private var appearanceSection: some View {
+    private var hapticsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Appearance")
-                .font(.headline)
-                .foregroundStyle(NightFlixStyle.primaryTextColor)
-
-            Picker("Appearance", selection: appearanceBinding) {
-                ForEach(AppAppearance.allCases) { appearance in
-                    Text(appearance.rawValue).tag(appearance)
-                }
-            }
-            .pickerStyle(.segmented)
-
-            Divider()
-                .background(NightFlixStyle.borderColor)
-
             Toggle("Haptic Feedback", isOn: hapticsBinding)
                 .font(.headline)
                 .foregroundStyle(NightFlixStyle.primaryTextColor)
@@ -447,17 +443,6 @@ struct SettingsView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(NightFlixStyle.borderColor, lineWidth: 1)
         }
-    }
-
-    private var appearanceBinding: Binding<AppAppearance> {
-        Binding(
-            get: { settings.appearance },
-            set: { newValue in
-                guard settings.appearance != newValue else { return }
-                HapticManager.shared.selection()
-                settings.appearance = newValue
-            }
-        )
     }
 
     private var automaticUpdateChecksBinding: Binding<Bool> {

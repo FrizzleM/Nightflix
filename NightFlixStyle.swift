@@ -2,25 +2,6 @@ import SwiftUI
 import UIKit
 import Combine
 
-enum AppAppearance: String, CaseIterable, Identifiable, Codable {
-    case auto = "Auto"
-    case dark = "Dark"
-    case light = "Light"
-
-    var id: String { rawValue }
-
-    var colorScheme: ColorScheme? {
-        switch self {
-        case .auto:
-            return nil
-        case .dark:
-            return .dark
-        case .light:
-            return .light
-        }
-    }
-}
-
 enum AppAnimationMode: String, CaseIterable, Identifiable, Codable {
     case total = "Full"
     case partial = "Startup Only"
@@ -30,7 +11,6 @@ enum AppAnimationMode: String, CaseIterable, Identifiable, Codable {
 }
 
 enum AppSettingsStorageKey {
-    static let appAppearance = "appAppearance"
     static let appAnimationMode = "appAnimationMode"
     static let skipIntroAnimation = "skipIntroAnimation"
     static let disableAutomaticUpdateChecks = "disableAutomaticUpdateChecks"
@@ -38,13 +18,29 @@ enum AppSettingsStorageKey {
     static let hasCompletedInitialSetup = "hasCompletedInitialSetup"
     static let tmdbCredential = "tmdbCredential"
     static let streamingProviderBaseURL = "streamingProviderBaseURL"
+    static let streamingProviderMigrationVersion = "streamingProviderMigrationVersion"
     static let accentColorHex = "accentColorHex"
 }
 
 enum NightFlixUserConfiguration {
     /// Credentials are baked in — the app requires no setup or user input.
     static let defaultTMDBCredential = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MTNlY2VkZmQ1NmVkNDZiMDBiZTg1N2Q3ODg3NTE1MSIsIm5iZiI6MTc3OTYyMzA4Mi4xNzUsInN1YiI6IjZhMTJlNGFhOWFkOWYxOWE3ZWE5Y2NiZiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.8g0u3KwAVxnWszrKGfqvxrUl0VuG-_e0ZvTv5xDVRd4"
-    static let defaultStreamingProviderBaseURL = "player.videasy.net"
+    /// The built-in player: VidFast (https://vidfast.vc). Movies are served from
+    /// `/movie/{tmdbId}` and episodes from `/tv/{tmdbId}/{season}/{episode}`.
+    static let defaultStreamingProviderBaseURL = "vidfast.vc"
+
+    /// Bumped whenever the built-in provider changes, so any provider URL saved by an
+    /// older build (Vidking, Videasy, or one typed during the old setup flow) is dropped
+    /// and the current default takes over.
+    private static let currentStreamingProviderMigrationVersion = 2
+
+    static func migrateStreamingProviderIfNeeded(defaults: UserDefaults = .standard) {
+        let key = AppSettingsStorageKey.streamingProviderMigrationVersion
+        guard defaults.integer(forKey: key) < currentStreamingProviderMigrationVersion else { return }
+
+        defaults.removeObject(forKey: AppSettingsStorageKey.streamingProviderBaseURL)
+        defaults.set(currentStreamingProviderMigrationVersion, forKey: key)
+    }
     /// The original Nightflix red, used when no custom accent has been chosen.
     static let defaultAccentColorHex = "e50914"
 
@@ -119,7 +115,6 @@ enum NightFlixUserConfiguration {
 }
 
 final class AppSettingsManager: ObservableObject {
-    @AppStorage(AppSettingsStorageKey.appAppearance) var appearanceRawValue: String = AppAppearance.auto.rawValue
     @AppStorage(AppSettingsStorageKey.disableAutomaticUpdateChecks) private var disableAutomaticUpdateChecksStorage = false
     @AppStorage(AppSettingsStorageKey.lastInstalledVersionCode) private var lastInstalledVersionCodeStorage = 0
     @AppStorage(AppSettingsStorageKey.hasCompletedInitialSetup) private var hasCompletedInitialSetupStorage = false
@@ -128,14 +123,8 @@ final class AppSettingsManager: ObservableObject {
     @AppStorage(AppSettingsStorageKey.accentColorHex) private var accentColorHexStorage = ""
     @Published private(set) var shutdownCountdown: Int?
 
-    var appearance: AppAppearance {
-        get {
-            AppAppearance(rawValue: appearanceRawValue) ?? .auto
-        }
-        set {
-            objectWillChange.send()
-            appearanceRawValue = newValue.rawValue
-        }
+    init() {
+        NightFlixUserConfiguration.migrateStreamingProviderIfNeeded()
     }
 
     /// Animations are always on at full strength — this is the standard now and is
@@ -234,10 +223,6 @@ final class AppSettingsManager: ObservableObject {
 
     var hasConfiguredStreamingProvider: Bool {
         !streamingProviderBaseURL.isEmpty
-    }
-
-    var preferredColorScheme: ColorScheme? {
-        appearance.colorScheme
     }
 
     var isShutdownInProgress: Bool {
@@ -365,63 +350,36 @@ enum NightFlixStyle {
         Color(hex: NightFlixUserConfiguration.effectiveAccentColorHex)
     }
 
-    /// The accent as a `UIColor`, for building dynamic (light/dark) derivatives.
-    static var accentUIColor: UIColor {
-        UIColor(accentColor)
-    }
-    static let backgroundColor = Color.dynamic(light: .systemBackground, dark: .black)
-    static let cardColor = Color.dynamic(light: .secondarySystemBackground, dark: UIColor(red: 27 / 255, green: 27 / 255, blue: 31 / 255, alpha: 1))
-    static let fieldColor = Color.dynamic(light: .tertiarySystemBackground, dark: .black.withAlphaComponent(0.35))
-    static let primaryTextColor = Color.dynamic(light: .label, dark: .white)
-    static let secondaryTextColor = Color.dynamic(light: .secondaryLabel, dark: .white.withAlphaComponent(0.68))
-    static let tertiaryTextColor = Color.dynamic(light: .tertiaryLabel, dark: .white.withAlphaComponent(0.52))
-    static let mutedTextColor = Color.dynamic(light: .tertiaryLabel, dark: .white.withAlphaComponent(0.45))
-    static let borderColor = Color.dynamic(light: .separator.withAlphaComponent(0.35), dark: .white.withAlphaComponent(0.07))
-    static let prominentBorderColor = Color.dynamic(light: .separator.withAlphaComponent(0.45), dark: .white.withAlphaComponent(0.09))
-    static let subtleFillColor = Color.dynamic(light: .systemGray5, dark: .white.withAlphaComponent(0.06))
-    /// The glow behind the Nightflix wordmark — follows the accent colour (dark mode only).
+    // Nightflix is dark-only, so these are fixed dark values rather than
+    // light/dark pairs.
+    static let backgroundColor = Color.black
+    static let cardColor = Color(red: 27 / 255, green: 27 / 255, blue: 31 / 255)
+    static let fieldColor = Color.black.opacity(0.35)
+    static let primaryTextColor = Color.white
+    static let secondaryTextColor = Color.white.opacity(0.68)
+    static let tertiaryTextColor = Color.white.opacity(0.52)
+    static let mutedTextColor = Color.white.opacity(0.45)
+    static let borderColor = Color.white.opacity(0.07)
+    static let prominentBorderColor = Color.white.opacity(0.09)
+    static let subtleFillColor = Color.white.opacity(0.06)
+    /// The glow behind the Nightflix wordmark — follows the accent colour.
     static var titleGlowColor: Color {
-        Color.dynamic(light: .clear, dark: accentUIColor.withAlphaComponent(0.95))
+        accentColor.opacity(0.95)
     }
     static var titleSecondaryGlowColor: Color {
-        Color.dynamic(light: .clear, dark: accentUIColor.withAlphaComponent(0.55))
+        accentColor.opacity(0.55)
     }
 
-    static func textColor(darkOpacity: CGFloat, light: UIColor = .secondaryLabel) -> Color {
-        Color.dynamic(light: light, dark: .white.withAlphaComponent(darkOpacity))
+    static func textColor(darkOpacity: CGFloat) -> Color {
+        .white.opacity(darkOpacity)
     }
 
-    static func fillColor(darkOpacity: CGFloat, light: UIColor = .systemGray5) -> Color {
-        Color.dynamic(light: light, dark: .white.withAlphaComponent(darkOpacity))
+    static func fillColor(darkOpacity: CGFloat) -> Color {
+        .white.opacity(darkOpacity)
     }
 
     static func borderColor(darkOpacity: CGFloat) -> Color {
-        Color.dynamic(light: .separator.withAlphaComponent(0.35), dark: .white.withAlphaComponent(darkOpacity))
-    }
-}
-
-struct NightflixTitleView: View {
-    let showTitle: Bool
-    let shouldAnimate: Bool
-
-    var body: some View {
-        Text("Nightflix")
-            .font(.system(size: 38, weight: .bold, design: .rounded))
-            .foregroundStyle(NightFlixStyle.accentColor)
-            .lineLimit(1)
-            .minimumScaleFactor(0.82)
-            .nightflixTitleGlow()
-            .shadow(color: NightFlixStyle.titleGlowColor, radius: 16)
-            .shadow(color: NightFlixStyle.titleSecondaryGlowColor, radius: 34)
-            .nightflixEntrance(
-                isVisible: showTitle,
-                delay: 0.1,
-                yOffset: 14,
-                scaleAmount: 0.98,
-                reduceMotionDuration: 0,
-                animationsEnabled: shouldAnimate
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
+        .white.opacity(darkOpacity)
     }
 }
 
@@ -430,7 +388,7 @@ enum StreamingProviderURLBuilder {
         !providerBaseURL.isEmpty
     }
 
-    static let configurationErrorMessage = "Add a movie provider URL in Settings before playing."
+    static let configurationErrorMessage = "Playback isn't available right now. Please try again in a moment."
 
     static func movieURL(tmdbId: Int, progressSeconds: Int? = nil) -> URL? {
         url(appending: "/movie/\(tmdbId)", isSeries: false, progressSeconds: progressSeconds)
@@ -438,6 +396,12 @@ enum StreamingProviderURLBuilder {
 
     static func tvURL(tmdbId: Int, season: Int, episode: Int, progressSeconds: Int? = nil) -> URL? {
         url(appending: "/tv/\(tmdbId)/\(season)/\(episode)", isSeries: true, progressSeconds: progressSeconds)
+    }
+
+    /// The provider's host (e.g. `vidfast.vc`), used by the player to keep the page
+    /// from being redirected to unrelated sites.
+    static var providerHost: String? {
+        URLComponents(string: providerBaseURL)?.host
     }
 
     private static var providerBaseURL: String {
@@ -460,34 +424,39 @@ enum StreamingProviderURLBuilder {
 
         components.path = "/\(combinedPath)"
 
-        // Videasy's `progress` query param sets the resume start time (seconds). Some
-        // embed players re-apply that seek on every playback tick, which snaps the
-        // video back and makes it loop on the resume second. We keep the param (it's
-        // what actually resumes) and suppress any such repeats in the WebView — see
+        // VidFast's `startAt` param sets the resume start time (seconds). Some embed
+        // players re-apply that seek on every playback tick, which snaps the video back
+        // and makes it loop on the resume second. We keep the param (it's what actually
+        // resumes) and suppress any such repeats in the WebView — see
         // `WebView.resumeLoopGuardScript`.
         var queryItems = (components.queryItems ?? []) + playbackQueryItems(isSeries: isSeries)
         if let progressSeconds, progressSeconds > 0 {
-            queryItems.append(URLQueryItem(name: "progress", value: String(progressSeconds)))
+            queryItems.append(URLQueryItem(name: "startAt", value: String(progressSeconds)))
         }
         components.queryItems = queryItems
 
         return components.url
     }
 
-    /// Videasy player parameters (see the Videasy embed docs). `color` themes the
-    /// player to the app accent (hex, no `#`) and `overlay` enables the Netflix-style
-    /// paused overlay; the episode-navigation params only apply to TV series.
+    /// VidFast player parameters (see the VidFast embed docs):
+    /// - `autoPlay` starts the stream as soon as the page is ready.
+    /// - `theme` tints the player to the app accent (hex, no `#`).
+    /// - `title=false` hides VidFast's own title, since the app draws its own.
+    /// - `chromecast=false` hides the Cast button, which can't work inside the app.
+    /// - `nextButton` / `autoNext` give series a "Next Episode" button and autoplay.
     private static func playbackQueryItems(isSeries: Bool) -> [URLQueryItem] {
         var items = [
-            URLQueryItem(name: "color", value: NightFlixUserConfiguration.effectiveAccentColorHex),
-            URLQueryItem(name: "overlay", value: "true")
+            URLQueryItem(name: "autoPlay", value: "true"),
+            URLQueryItem(name: "theme", value: NightFlixUserConfiguration.effectiveAccentColorHex.uppercased()),
+            URLQueryItem(name: "title", value: "false"),
+            URLQueryItem(name: "poster", value: "true"),
+            URLQueryItem(name: "chromecast", value: "false")
         ]
 
         if isSeries {
             items.append(contentsOf: [
-                URLQueryItem(name: "nextEpisode", value: "true"),
-                URLQueryItem(name: "episodeSelector", value: "true"),
-                URLQueryItem(name: "autoplayNextEpisode", value: "true")
+                URLQueryItem(name: "nextButton", value: "true"),
+                URLQueryItem(name: "autoNext", value: "true")
             ])
         }
 
@@ -704,11 +673,11 @@ struct AnimatedEntranceModifier: ViewModifier {
 }
 
 private struct NightflixTitleGlowModifier: ViewModifier {
-    @Environment(\.colorScheme) private var colorScheme
-
     let opacity: CGFloat
     let scale: CGFloat
     let offset: CGSize
+
+    private let baseOpacity: CGFloat = 0.18
 
     func body(content: Content) -> some View {
         content
@@ -722,46 +691,5 @@ private struct NightflixTitleGlowModifier: ViewModifier {
                     .blur(radius: 36)
                     .allowsHitTesting(false)
             }
-    }
-
-    private var baseOpacity: CGFloat {
-        colorScheme == .dark ? 0.18 : 0.06
-    }
-}
-
-private extension Color {
-    static func dynamic(light: UIColor, dark: UIColor) -> Color {
-        Color(UIColor { traitCollection in
-            traitCollection.userInterfaceStyle == .dark ? dark : light
-        })
-    }
-}
-
-struct NightFlixPosterImage: View {
-    let url: URL?
-    let width: CGFloat
-    let height: CGFloat
-
-    var body: some View {
-        AsyncImage(url: url) { phase in
-            switch phase {
-            case .empty:
-                PosterSkeletonView(width: width, height: height)
-            case .success(let image):
-                image
-                    .resizable()
-                    .scaledToFill()
-            case .failure:
-                placeholder
-            @unknown default:
-                placeholder
-            }
-        }
-        .frame(width: width, height: height)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-
-    private var placeholder: some View {
-        PosterFallbackView()
     }
 }

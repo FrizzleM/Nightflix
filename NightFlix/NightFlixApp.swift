@@ -9,6 +9,7 @@ import SwiftUI
 
 @main
 struct NightFlixApp: App {
+    @UIApplicationDelegateAdaptor(NightflixAppDelegate.self) private var appDelegate
     @StateObject private var settings = AppSettingsManager()
 
     var body: some Scene {
@@ -17,7 +18,7 @@ struct NightFlixApp: App {
                 .environmentObject(settings)
                 .environment(\.nightflixAccent, settings.accentColor)
                 .tint(settings.accentColor)
-                .preferredColorScheme(settings.preferredColorScheme)
+                .preferredColorScheme(.dark)
         }
     }
 }

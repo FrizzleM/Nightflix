@@ -1,26 +1,31 @@
 import SwiftUI
 import WebKit
 
-/// SwiftUI wrapper around WKWebView so the player stays integrated in the app.
+/// SwiftUI wrapper around WKWebView so the provider's player stays integrated in the app.
 struct WebView: UIViewRepresentable {
     let url: URL
+    /// Bump to force a fresh load of `url` (e.g. a "Try Again" button).
+    var reloadToken: Int = 0
     @Binding var isLoading: Bool
     @Binding var errorMessage: String?
-    /// Called on the main thread whenever the embedded player reports a progress event.
-    var onPlayerEvent: ((VideasyPlayerEvent) -> Void)? = nil
+    /// Called on the main thread for every message the player page sends.
+    var onMessage: ((PlayerBridgeMessage) -> Void)? = nil
 
-    /// Name of the JS message channel and the injected listener script.
+    /// Name of the JS message channel used by the injected bridge script.
     private static let messageHandlerName = "nightflixPlayerEvents"
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(isLoading: $isLoading, errorMessage: $errorMessage, onPlayerEvent: onPlayerEvent)
+        Coordinator(isLoading: $isLoading, errorMessage: $errorMessage, onMessage: onMessage)
     }
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.allowsInlineMediaPlayback = true
+        configuration.allowsPictureInPictureMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
+        // Present as Mobile Safari so providers serve their regular mobile player.
+        configuration.applicationNameForUserAgent = "Version/18.0 Mobile/15E148 Safari/604.1"
 
         let contentController = configuration.userContentController
         contentController.add(
@@ -29,7 +34,7 @@ struct WebView: UIViewRepresentable {
         )
         contentController.addUserScript(
             WKUserScript(
-                source: Self.progressBridgeScript,
+                source: Self.playerBridgeScript,
                 injectionTime: .atDocumentStart,
                 forMainFrameOnly: true
             )
@@ -47,47 +52,84 @@ struct WebView: UIViewRepresentable {
         webView.uiDelegate = context.coordinator
         webView.isOpaque = false
         webView.backgroundColor = .black
+        webView.allowsBackForwardNavigationGestures = false
         webView.scrollView.backgroundColor = .black
-        context.coordinator.load(url, in: webView)
+        webView.scrollView.bounces = false
+        webView.scrollView.isScrollEnabled = false
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        context.coordinator.load(url, reloadToken: reloadToken, in: webView)
         return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
-        context.coordinator.onPlayerEvent = onPlayerEvent
-        context.coordinator.load(url, in: webView)
+        context.coordinator.onMessage = onMessage
+        context.coordinator.load(url, reloadToken: reloadToken, in: webView)
     }
 
-    /// Listens for the Videasy player's `postMessage` progress updates on the parent
-    /// window and forwards them to the native bridge. Videasy posts each update as a
-    /// JSON string with a flat payload (no `{ type, data }` envelope), so we parse it
-    /// and forward only messages that actually carry playback progress — ignoring the
-    /// unrelated `postMessage` traffic that shares the window. Mirrors the integration
-    /// snippet from the Videasy docs.
-    private static let progressBridgeScript = """
+    static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
+        // Stop audio immediately when the player closes instead of waiting for
+        // the web view to be deallocated.
+        webView.stopLoading()
+        webView.pauseAllMediaPlayback(completionHandler: nil)
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: messageHandlerName)
+    }
+
+    /// Forwards the player's `postMessage` traffic to native code. VidFast posts
+    /// `PLAYER_EVENT` envelopes and a `status` object; Videasy-style providers post
+    /// flat progress payloads (sometimes as JSON strings). Anything else sharing the
+    /// window is ignored. Touches on the page are reported (throttled) so the app can
+    /// show its own chrome together with the player's controls.
+    private static let playerBridgeScript = """
     (function () {
-        function looksLikeProgressEvent(payload) {
-            if (!payload || typeof payload !== "object") { return false; }
+        var handlers = window.webkit && window.webkit.messageHandlers;
+        var channel = handlers && handlers.\(messageHandlerName);
+        if (!channel) { return; }
+
+        function post(payload) {
+            try { channel.postMessage(payload); } catch (e) {}
+        }
+
+        function normalize(raw) {
+            var payload = raw;
+            if (typeof raw === "string") {
+                try { payload = JSON.parse(raw); } catch (e) { return null; }
+            }
+            if (!payload || typeof payload !== "object") { return null; }
+            return payload;
+        }
+
+        function shouldForward(payload) {
+            if (payload.type === "PLAYER_EVENT") {
+                return !!payload.data && typeof payload.data === "object";
+            }
+            if (payload.event === "status") { return true; }
             var hasPosition = payload.timestamp !== undefined || payload.progress !== undefined;
             var hasIdentity = payload.id !== undefined || payload.type !== undefined;
             return hasPosition && hasIdentity;
         }
-        function forward(raw) {
-            try {
-                var payload = raw;
-                if (typeof raw === "string") {
-                    try { payload = JSON.parse(raw); } catch (e) { return; }
-                }
-                if (!looksLikeProgressEvent(payload)) { return; }
-                window.webkit.messageHandlers.\(messageHandlerName).postMessage(payload);
-            } catch (e) {}
+
+        window.addEventListener("message", function (event) {
+            var payload = normalize(event.data);
+            if (!payload || !shouldForward(payload)) { return; }
+            try { post(JSON.parse(JSON.stringify(payload))); } catch (e) {}
+        }, false);
+
+        var lastTouch = 0;
+        function reportInteraction() {
+            var now = Date.now();
+            if (now - lastTouch < 350) { return; }
+            lastTouch = now;
+            post({ type: "NIGHTFLIX_INTERACTION" });
         }
-        window.addEventListener("message", function (event) { forward(event.data); }, false);
+        document.addEventListener("touchstart", reportInteraction, { capture: true, passive: true });
+        document.addEventListener("mousedown", reportInteraction, { capture: true, passive: true });
     })();
     """
 
-    /// Works around an embed-player quirk: when the embed is opened with a `progress`
-    /// (resume) start time, the player can re-apply that exact seek on *every* playback
-    /// tick, which snaps the video back and makes it loop on the resume second.
+    /// Works around an embed-player quirk: when the embed is opened with a resume start
+    /// time (`startAt`, or `progress` for Videasy-style providers), the player can
+    /// re-apply that exact seek on *every* playback tick, which snaps the video back and
+    /// makes it loop on the resume second.
     ///
     /// We intercept the `<video>` element's `currentTime` setter and only honor a seek
     /// to the resume value when it's a genuine (re)start:
@@ -95,14 +137,12 @@ struct WebView: UIViewRepresentable {
     ///   * after a real jump back toward the start — e.g. iOS reloads the HLS media and
     ///     resets to 0:00 when handing off to the native full-screen player.
     /// The per-tick repeats (which arrive while playback is already at/after the resume
-    /// point) are ignored, so playback runs forward normally. Because those repeats are
-    /// suppressed, `currentTime` only ever falls below the furthest-watched mark on a
-    /// real reload, which is exactly how we tell the two cases apart. Ordinary playback,
+    /// point) are ignored, so playback runs forward normally. Ordinary playback,
     /// scrubbing and ±10s skips are untouched — they never seek to the exact resume value.
     private static let resumeLoopGuardScript = """
     (function () {
         var params = new URLSearchParams(window.location.search);
-        var raw = params.get("progress");
+        var raw = params.get("startAt") || params.get("progress");
         var resumeTime = raw ? parseFloat(raw) : NaN;
         if (!(resumeTime > 0)) { return; }
 
@@ -183,34 +223,40 @@ struct WebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         @Binding private var isLoading: Bool
         @Binding private var errorMessage: String?
-        var onPlayerEvent: ((VideasyPlayerEvent) -> Void)?
+        var onMessage: ((PlayerBridgeMessage) -> Void)?
         private var requestedURL: URL?
+        private var requestedReloadToken: Int?
+        /// The provider's "brand" label (e.g. `vidfast` for vidfast.vc), so the page may
+        /// hop between the provider's own mirror domains but not to unrelated sites.
+        private var allowedBrandLabel: String?
 
         init(
             isLoading: Binding<Bool>,
             errorMessage: Binding<String?>,
-            onPlayerEvent: ((VideasyPlayerEvent) -> Void)?
+            onMessage: ((PlayerBridgeMessage) -> Void)?
         ) {
             _isLoading = isLoading
             _errorMessage = errorMessage
-            self.onPlayerEvent = onPlayerEvent
+            self.onMessage = onMessage
         }
 
         func userContentController(
             _ userContentController: WKUserContentController,
             didReceive message: WKScriptMessage
         ) {
-            guard let event = VideasyPlayerEvent(payload: message.body) else { return }
+            guard let bridgeMessage = PlayerBridgeMessage(payload: message.body) else { return }
 
             DispatchQueue.main.async { [weak self] in
-                self?.onPlayerEvent?(event)
+                self?.onMessage?(bridgeMessage)
             }
         }
 
-        func load(_ url: URL, in webView: WKWebView) {
-            guard requestedURL != url else { return }
+        func load(_ url: URL, reloadToken: Int, in webView: WKWebView) {
+            guard requestedURL != url || requestedReloadToken != reloadToken else { return }
 
             requestedURL = url
+            requestedReloadToken = reloadToken
+            allowedBrandLabel = Self.brandLabel(of: url.host)
             updateState(isLoading: true, errorMessage: nil)
             webView.load(URLRequest(url: url))
         }
@@ -228,11 +274,23 @@ struct WebView: UIViewRepresentable {
             decidePolicyFor navigationAction: WKNavigationAction,
             decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
         ) {
-            if navigationAction.targetFrame == nil {
+            // Never open new windows or tabs (pop-ups / pop-unders).
+            guard let targetFrame = navigationAction.targetFrame else {
                 decisionHandler(.cancel)
-            } else {
-                decisionHandler(.allow)
+                return
             }
+
+            // Keep the top-level page on the provider: block redirects of the whole
+            // player to other sites. Embedded frames (stream servers) stay free.
+            if targetFrame.isMainFrame,
+               let host = navigationAction.request.url?.host,
+               let allowedBrandLabel,
+               Self.brandLabel(of: host) != allowedBrandLabel {
+                decisionHandler(.cancel)
+                return
+            }
+
+            decisionHandler(.allow)
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
@@ -272,6 +330,17 @@ struct WebView: UIViewRepresentable {
                 self.errorMessage = newErrorMessage
             }
         }
+
+        /// The label just left of the top-level domain: `vidfast` for `vidfast.vc` or
+        /// `www.vidfast.pro`, `videasy` for `player.videasy.net`.
+        private static func brandLabel(of host: String?) -> String? {
+            guard let host else { return nil }
+
+            let labels = host.lowercased().split(separator: ".")
+            guard labels.count >= 2 else { return labels.first.map(String.init) }
+
+            return String(labels[labels.count - 2])
+        }
     }
 }
 
@@ -283,6 +352,7 @@ private extension Error {
             return true
         }
 
+        // 102 = "Frame load interrupted" (e.g. a navigation we cancelled above).
         return error.domain == "WebKitErrorDomain" && error.code == 102
     }
 }

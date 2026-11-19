@@ -38,6 +38,9 @@ struct TMDBMovieResult: Identifiable, Decodable, Equatable {
     let overview: String
     let posterPath: String?
     let backdropPath: String?
+    let voteAverage: Double?
+    let voteCount: Int?
+    let genreIds: [Int]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -46,6 +49,9 @@ struct TMDBMovieResult: Identifiable, Decodable, Equatable {
         case overview
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
+        case voteAverage = "vote_average"
+        case voteCount = "vote_count"
+        case genreIds = "genre_ids"
     }
 
     init(from decoder: Decoder) throws {
@@ -56,6 +62,9 @@ struct TMDBMovieResult: Identifiable, Decodable, Equatable {
         overview = try container.decodeIfPresent(String.self, forKey: .overview) ?? ""
         posterPath = try container.decodeIfPresent(String.self, forKey: .posterPath)
         backdropPath = try container.decodeIfPresent(String.self, forKey: .backdropPath)
+        voteAverage = try container.decodeIfPresent(Double.self, forKey: .voteAverage)
+        voteCount = try container.decodeIfPresent(Int.self, forKey: .voteCount)
+        genreIds = try container.decodeIfPresent([Int].self, forKey: .genreIds)
     }
 
     var releaseYear: String? {
@@ -75,6 +84,9 @@ struct TMDBTVResult: Identifiable, Decodable, Equatable {
     let overview: String
     let posterPath: String?
     let backdropPath: String?
+    let voteAverage: Double?
+    let voteCount: Int?
+    let genreIds: [Int]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -83,6 +95,9 @@ struct TMDBTVResult: Identifiable, Decodable, Equatable {
         case overview
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
+        case voteAverage = "vote_average"
+        case voteCount = "vote_count"
+        case genreIds = "genre_ids"
     }
 
     init(from decoder: Decoder) throws {
@@ -93,6 +108,9 @@ struct TMDBTVResult: Identifiable, Decodable, Equatable {
         overview = try container.decodeIfPresent(String.self, forKey: .overview) ?? ""
         posterPath = try container.decodeIfPresent(String.self, forKey: .posterPath)
         backdropPath = try container.decodeIfPresent(String.self, forKey: .backdropPath)
+        voteAverage = try container.decodeIfPresent(Double.self, forKey: .voteAverage)
+        voteCount = try container.decodeIfPresent(Int.self, forKey: .voteCount)
+        genreIds = try container.decodeIfPresent([Int].self, forKey: .genreIds)
     }
 
     var firstAirYear: String? {
@@ -115,6 +133,9 @@ struct MediaSearchResult: Identifiable, Decodable, Equatable, Hashable {
     let overview: String
     let posterPath: String?
     let backdropPath: String?
+    let voteAverage: Double?
+    let voteCount: Int?
+    let genreIds: [Int]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -126,6 +147,9 @@ struct MediaSearchResult: Identifiable, Decodable, Equatable, Hashable {
         case overview
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
+        case voteAverage = "vote_average"
+        case voteCount = "vote_count"
+        case genreIds = "genre_ids"
     }
 
     init(from decoder: Decoder) throws {
@@ -139,6 +163,9 @@ struct MediaSearchResult: Identifiable, Decodable, Equatable, Hashable {
         overview = try container.decodeIfPresent(String.self, forKey: .overview) ?? ""
         posterPath = try container.decodeIfPresent(String.self, forKey: .posterPath)
         backdropPath = try container.decodeIfPresent(String.self, forKey: .backdropPath)
+        voteAverage = try container.decodeIfPresent(Double.self, forKey: .voteAverage)
+        voteCount = try container.decodeIfPresent(Int.self, forKey: .voteCount)
+        genreIds = try container.decodeIfPresent([Int].self, forKey: .genreIds)
     }
 
     var displayTitle: String {
@@ -185,6 +212,9 @@ struct MediaItem: Identifiable, Decodable, Equatable, Hashable {
     let firstAirDate: String?
     let posterPath: String?
     let backdropPath: String?
+    let voteAverage: Double?
+    let voteCount: Int?
+    let genreIds: [Int]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -196,6 +226,9 @@ struct MediaItem: Identifiable, Decodable, Equatable, Hashable {
         case firstAirDate = "first_air_date"
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
+        case voteAverage = "vote_average"
+        case voteCount = "vote_count"
+        case genreIds = "genre_ids"
     }
 
     init(
@@ -207,7 +240,10 @@ struct MediaItem: Identifiable, Decodable, Equatable, Hashable {
         releaseDate: String? = nil,
         firstAirDate: String? = nil,
         posterPath: String? = nil,
-        backdropPath: String? = nil
+        backdropPath: String? = nil,
+        voteAverage: Double? = nil,
+        voteCount: Int? = nil,
+        genreIds: [Int]? = nil
     ) {
         self.id = id
         self.mediaType = mediaType
@@ -218,6 +254,9 @@ struct MediaItem: Identifiable, Decodable, Equatable, Hashable {
         self.firstAirDate = firstAirDate
         self.posterPath = posterPath
         self.backdropPath = backdropPath
+        self.voteAverage = voteAverage
+        self.voteCount = voteCount
+        self.genreIds = genreIds
     }
 
     init(from decoder: Decoder) throws {
@@ -231,6 +270,9 @@ struct MediaItem: Identifiable, Decodable, Equatable, Hashable {
         firstAirDate = try container.decodeIfPresent(String.self, forKey: .firstAirDate)
         posterPath = try container.decodeIfPresent(String.self, forKey: .posterPath)
         backdropPath = try container.decodeIfPresent(String.self, forKey: .backdropPath)
+        voteAverage = try container.decodeIfPresent(Double.self, forKey: .voteAverage)
+        voteCount = try container.decodeIfPresent(Int.self, forKey: .voteCount)
+        genreIds = try container.decodeIfPresent([Int].self, forKey: .genreIds)
     }
 
     var displayTitle: String {
@@ -398,6 +440,9 @@ struct TMDBTrendingResult: Identifiable, Decodable, Equatable {
     let overview: String
     let posterPath: String?
     let backdropPath: String?
+    let voteAverage: Double?
+    let voteCount: Int?
+    let genreIds: [Int]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -409,6 +454,9 @@ struct TMDBTrendingResult: Identifiable, Decodable, Equatable {
         case overview
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
+        case voteAverage = "vote_average"
+        case voteCount = "vote_count"
+        case genreIds = "genre_ids"
     }
 
     init(from decoder: Decoder) throws {
@@ -422,6 +470,9 @@ struct TMDBTrendingResult: Identifiable, Decodable, Equatable {
         overview = try container.decodeIfPresent(String.self, forKey: .overview) ?? ""
         posterPath = try container.decodeIfPresent(String.self, forKey: .posterPath)
         backdropPath = try container.decodeIfPresent(String.self, forKey: .backdropPath)
+        voteAverage = try container.decodeIfPresent(Double.self, forKey: .voteAverage)
+        voteCount = try container.decodeIfPresent(Int.self, forKey: .voteCount)
+        genreIds = try container.decodeIfPresent([Int].self, forKey: .genreIds)
     }
 }
 
@@ -433,6 +484,9 @@ struct FeedItem: Identifiable, Equatable, Hashable {
     let overview: String
     let posterPath: String?
     let backdropPath: String?
+    let voteAverage: Double?
+    let voteCount: Int?
+    let genreIds: [Int]?
 
     init(movie: TMDBMovieResult) {
         id = movie.id
@@ -442,6 +496,9 @@ struct FeedItem: Identifiable, Equatable, Hashable {
         overview = movie.overview
         posterPath = movie.posterPath
         backdropPath = movie.backdropPath
+        voteAverage = movie.voteAverage
+        voteCount = movie.voteCount
+        genreIds = movie.genreIds
     }
 
     init(tv: TMDBTVResult) {
@@ -452,6 +509,9 @@ struct FeedItem: Identifiable, Equatable, Hashable {
         overview = tv.overview
         posterPath = tv.posterPath
         backdropPath = tv.backdropPath
+        voteAverage = tv.voteAverage
+        voteCount = tv.voteCount
+        genreIds = tv.genreIds
     }
 
     init(recommendation: MediaRecommendationItem, fallbackType: WatchType) {
@@ -472,6 +532,9 @@ struct FeedItem: Identifiable, Equatable, Hashable {
         overview = recommendation.overview ?? ""
         posterPath = recommendation.posterPath
         backdropPath = recommendation.backdropPath
+        voteAverage = recommendation.voteAverage
+        voteCount = recommendation.voteCount
+        genreIds = recommendation.genreIds
     }
 
     init?(trendingResult: TMDBTrendingResult) {
@@ -492,6 +555,9 @@ struct FeedItem: Identifiable, Equatable, Hashable {
         overview = trendingResult.overview
         posterPath = trendingResult.posterPath
         backdropPath = trendingResult.backdropPath
+        voteAverage = trendingResult.voteAverage
+        voteCount = trendingResult.voteCount
+        genreIds = trendingResult.genreIds
     }
 
     var posterURL: URL? {
@@ -503,6 +569,10 @@ struct FeedItem: Identifiable, Equatable, Hashable {
 struct Genre: Identifiable, Decodable, Equatable, Hashable {
     let id: Int
     let name: String
+}
+
+struct GenreListResponse: Decodable {
+    let genres: [Genre]
 }
 
 struct CastMember: Identifiable, Decodable, Equatable, Hashable {
@@ -566,6 +636,9 @@ struct MediaRecommendationItem: Identifiable, Decodable, Equatable, Hashable {
     let posterPath: String?
     let backdropPath: String?
     let mediaType: String?
+    let voteAverage: Double?
+    let voteCount: Int?
+    let genreIds: [Int]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -577,6 +650,9 @@ struct MediaRecommendationItem: Identifiable, Decodable, Equatable, Hashable {
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
         case mediaType = "media_type"
+        case voteAverage = "vote_average"
+        case voteCount = "vote_count"
+        case genreIds = "genre_ids"
     }
 
     var displayTitle: String {

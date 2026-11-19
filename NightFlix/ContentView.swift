@@ -8,7 +8,7 @@ struct ContentView: View {
             if settings.isShutdownInProgress {
                 NightFlixStyle.backgroundColor.ignoresSafeArea()
             } else {
-                MainTabView()
+                NFRootView()
             }
 
             if let shutdownCountdown = settings.shutdownCountdown {

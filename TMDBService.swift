@@ -204,6 +204,26 @@ struct TMDBService {
         try await requestDecoded(path: "/3/tv/\(seriesId)/season/\(seasonNumber)")
     }
 
+    /// Generic `results` list request (trending, discover, now playing, …), cached
+    /// with the same TTL rules as the typed calls.
+    func fetchResults<Result: Decodable>(
+        _ type: Result.Type,
+        path: String,
+        queryItems: [URLQueryItem] = []
+    ) async throws -> [Result] {
+        let response: TMDBSearchResponse<Result> = try await requestSearch(path: path, queryItems: queryItems)
+        return response.results
+    }
+
+    /// Generic single-object request (title details, images, seasons, …).
+    func fetchObject<Result: Decodable>(
+        _ type: Result.Type,
+        path: String,
+        queryItems: [URLQueryItem] = []
+    ) async throws -> Result {
+        try await requestDecoded(path: path, queryItems: queryItems)
+    }
+
     private func requestSearch<Result: Decodable>(
         path: String,
         queryItems: [URLQueryItem] = []
@@ -292,6 +312,15 @@ struct TMDBService {
              "/3/movie/top_rated",
              "/3/tv/top_rated":
             return 15 * 60
+        case _ where path.contains("/trending/"):
+            return 30 * 60
+        case _ where path.hasSuffix("/now_playing")
+            || path.hasSuffix("/upcoming")
+            || path.hasSuffix("/on_the_air")
+            || path.hasSuffix("/airing_today"):
+            return 60 * 60
+        case _ where path.hasSuffix("/images"):
+            return 24 * 60 * 60
         case _ where path.contains("/discover/"):
             return 30 * 60
         default:
