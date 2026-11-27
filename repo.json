@@ -22,11 +22,11 @@
       "screenshots": [],
       "versions": [
         {
-          "downloadURL": "https://github.com/FrizzleM/Nightflix/releases/download/v3.0.0/Nightflix.ipa",
-          "size": 6293121,
-          "version": "3.0.0",
+          "downloadURL": "https://github.com/FrizzleM/Nightflix/releases/download/v3.0.1/Nightflix.ipa",
+          "size": 6318722,
+          "version": "3.0.1",
           "buildVersion": "1",
-          "date": "2026-11-19T12:39:30Z",
+          "date": "2026-11-27T10:15:25Z",
           "localizedDescription": "Fixes player buttons (fullscreen, settings, skip) that often did not respond to taps.",
           "minOSVersion": "17.0"
         }
@@ -35,10 +35,10 @@
         "entitlements": [],
         "privacy": {}
       },
-      "version": "3.0.0",
-      "versionDate": "2026-11-19T12:39:30Z",
-      "size": 6293121,
-      "downloadURL": "https://github.com/FrizzleM/Nightflix/releases/download/v3.0.0/Nightflix.ipa"
+      "version": "3.0.1",
+      "versionDate": "2026-11-27T10:15:25Z",
+      "size": 6318722,
+      "downloadURL": "https://github.com/FrizzleM/Nightflix/releases/download/v3.0.1/Nightflix.ipa"
     }
   ],
   "news": []
