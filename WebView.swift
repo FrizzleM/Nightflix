@@ -34,6 +34,13 @@ struct WebView: UIViewRepresentable {
         )
         contentController.addUserScript(
             WKUserScript(
+                source: Self.tapShieldScript,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: false
+            )
+        )
+        contentController.addUserScript(
+            WKUserScript(
                 source: Self.playerBridgeScript,
                 injectionTime: .atDocumentStart,
                 forMainFrameOnly: true
@@ -73,6 +80,157 @@ struct WebView: UIViewRepresentable {
         webView.pauseAllMediaPlayback(completionHandler: nil)
         webView.configuration.userContentController.removeScriptMessageHandler(forName: messageHandlerName)
     }
+
+    /// Keeps the player's controls responsive on pages that also carry pop-up ad scripts.
+    ///
+    /// Those scripts listen for every tap on `window` and `document` in the capture phase
+    /// and cancel it (`preventDefault` + `stopImmediatePropagation`) before trying to open
+    /// an ad window. Their frequency cap only starts once that window opens, and the app
+    /// never opens it, so the cap never kicks in and every later tap is swallowed too: the
+    /// fullscreen, settings and skip buttons stop responding.
+    ///
+    /// Tap and click listeners that scripts from *other* sites attach to the window or the
+    /// document still run, but they can no longer cancel the tap or stop it from reaching
+    /// the player. The page's own scripts (any host with the page's brand label, such as
+    /// `vidfast` for `vidfast.vc`) are left alone. Runs in every frame, so an embedded
+    /// server page gets the same protection against its own ad scripts.
+    private static let tapShieldScript = #"""
+    (function () {
+        "use strict";
+        if (!window.EventTarget || !window.Event || !window.WeakMap) { return; }
+
+        var tapEvents = {
+            touchstart: true, touchend: true, pointerdown: true, pointerup: true,
+            mousedown: true, mouseup: true, click: true
+        };
+        var otherSite = "#other";
+
+        // `vidfast` for vidfast.vc or www.vidfast.pro (matches WebView.brandLabel(of:)).
+        function brandOf(host) {
+            var labels = String(host || "").toLowerCase().split(".").filter(Boolean);
+            if (labels.length === 0) { return null; }
+            return labels.length >= 2 ? labels[labels.length - 2] : labels[0];
+        }
+
+        var ownBrand = brandOf(location.hostname);
+        if (!ownBrand) { return; }
+
+        // The site of the page script calling in, from the first stack frame with a web
+        // URL (user scripts such as this one have none). Blob and data scripts count as
+        // another site; null when no page script is on the stack.
+        function callerBrand() {
+            var stack;
+            try { throw new Error(); } catch (error) { stack = String(error.stack || ""); }
+            var lines = stack.split("\n");
+            for (var i = 0; i < lines.length; i++) {
+                if (/\b(?:blob|data):/.test(lines[i])) { return otherSite; }
+                var match = /\bhttps?:\/\/([^\/\s:@]+)/.exec(lines[i]);
+                if (match) { return brandOf(match[1]) || otherSite; }
+            }
+            return null;
+        }
+
+        function isPageWideTarget(target) {
+            return target === window || target === document ||
+                target === document.documentElement || (document.body !== null && target === document.body);
+        }
+
+        // Events a listener from another site is handling right now.
+        var shielded = [];
+        function isShielded(event) {
+            return shielded.length > 0 && shielded.indexOf(event) !== -1;
+        }
+
+        var wrappers = new WeakMap();
+        function shieldedListener(listener) {
+            var wrapper = wrappers.get(listener);
+            if (!wrapper) {
+                wrapper = function (event) {
+                    shielded.push(event);
+                    try {
+                        return typeof listener === "function"
+                            ? listener.call(this, event)
+                            : listener.handleEvent(event);
+                    } finally {
+                        shielded.pop();
+                    }
+                };
+                wrappers.set(listener, wrapper);
+            }
+            return wrapper;
+        }
+
+        // Patched functions still print as native code, so scripts that look for patches
+        // don't route around them.
+        var nativeToString = Function.prototype.toString;
+        var originals = new WeakMap();
+        function disguise(replacement, original) {
+            originals.set(replacement, original);
+            return replacement;
+        }
+
+        var targetPrototype = EventTarget.prototype;
+        var nativeAdd = targetPrototype.addEventListener;
+        var nativeRemove = targetPrototype.removeEventListener;
+
+        targetPrototype.addEventListener = disguise(function addEventListener(type, listener) {
+            if (listener && tapEvents[type] === true && isPageWideTarget(this)) {
+                var brand = callerBrand();
+                if (brand !== null && brand !== ownBrand) {
+                    var args = Array.prototype.slice.call(arguments);
+                    args[1] = shieldedListener(listener);
+                    return nativeAdd.apply(this, args);
+                }
+            }
+            return nativeAdd.apply(this, arguments);
+        }, nativeAdd);
+
+        targetPrototype.removeEventListener = disguise(function removeEventListener(type, listener) {
+            var wrapper = listener ? wrappers.get(listener) : undefined;
+            if (wrapper) {
+                var args = Array.prototype.slice.call(arguments);
+                args[1] = wrapper;
+                nativeRemove.apply(this, args);
+            }
+            return nativeRemove.apply(this, arguments);
+        }, nativeRemove);
+
+        var eventPrototype = Event.prototype;
+        var nativePreventDefault = eventPrototype.preventDefault;
+        var nativeStopPropagation = eventPrototype.stopPropagation;
+        var nativeStopImmediatePropagation = eventPrototype.stopImmediatePropagation;
+
+        eventPrototype.preventDefault = disguise(function preventDefault() {
+            if (!isShielded(this)) { nativePreventDefault.call(this); }
+        }, nativePreventDefault);
+        eventPrototype.stopPropagation = disguise(function stopPropagation() {
+            if (!isShielded(this)) { nativeStopPropagation.call(this); }
+        }, nativeStopPropagation);
+        eventPrototype.stopImmediatePropagation = disguise(function stopImmediatePropagation() {
+            if (!isShielded(this)) { nativeStopImmediatePropagation.call(this); }
+        }, nativeStopImmediatePropagation);
+
+        // The legacy spellings: `returnValue = false` and `cancelBubble = true`.
+        ["returnValue", "cancelBubble"].forEach(function (name) {
+            var descriptor = Object.getOwnPropertyDescriptor(eventPrototype, name);
+            if (!descriptor || !descriptor.set || !descriptor.configurable) { return; }
+            var setter = descriptor.set;
+            Object.defineProperty(eventPrototype, name, {
+                configurable: true,
+                enumerable: descriptor.enumerable,
+                get: descriptor.get,
+                set: disguise(function (value) {
+                    if (isShielded(this)) { return; }
+                    setter.call(this, value);
+                }, setter)
+            });
+        });
+
+        Function.prototype.toString = disguise(function toString() {
+            return nativeToString.call(originals.get(this) || this);
+        }, nativeToString);
+    })();
+    """#
 
     /// Forwards the player's `postMessage` traffic to native code. VidFast posts
     /// `PLAYER_EVENT` envelopes and a `status` object; Videasy-style providers post

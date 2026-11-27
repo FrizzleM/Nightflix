@@ -27,7 +27,7 @@
           "version": "3.0.0",
           "buildVersion": "1",
           "date": "2026-11-19T12:39:30Z",
-          "localizedDescription": "All-new Netflix-style interface with New & Hot, My Nightflix, title pages with episodes and trailers, release reminders, and a new built-in player.",
+          "localizedDescription": "Fixes player buttons (fullscreen, settings, skip) that often did not respond to taps.",
           "minOSVersion": "17.0"
         }
       ],
